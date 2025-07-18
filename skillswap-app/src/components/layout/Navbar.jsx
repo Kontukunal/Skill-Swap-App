@@ -5,6 +5,7 @@ import { Menu, Transition } from "@headlessui/react";
 import { FiMenu, FiX, FiUser, FiLogOut, FiSun, FiMoon } from "react-icons/fi";
 import { Fragment } from "react";
 import Logo from "../../assets/logo.svg";
+import NotificationBell from "../notifications/NotificationBell"; 
 
 const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
   const { currentUser, logout } = useAuth();
@@ -56,6 +57,9 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
                 <FiMoon className="h-5 w-5" />
               )}
             </button>
+
+            {/* Add NotificationBell here */}
+            {currentUser && <NotificationBell />}
 
             {currentUser ? (
               <Menu as="div" className="relative">

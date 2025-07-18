@@ -13,6 +13,7 @@ import CommunityPage from "./pages/CommunityPage";
 import ResourcesPage from "./pages/ResourcesPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import "./styles/global.css";
+import ExchangeSessionsPage from "./pages/ExchangeSessionsPage";
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
             {/* Protected routes */}
             <Route element={<PrivateRoute />}>
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/sessions" element={<ExchangeSessionsPage />} />
               <Route path="/exchange" element={<ExchangePage />} />
               <Route path="/community" element={<CommunityPage />} />
               <Route path="/resources" element={<ResourcesPage />} />
