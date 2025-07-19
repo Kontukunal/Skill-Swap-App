@@ -8,15 +8,22 @@ import {
   FiBook,
   FiSettings,
 } from "react-icons/fi";
+import { RiExchangeBoxLine } from "react-icons/ri";
+import { BsPersonVideo } from "react-icons/bs";
+import { IoIosPeople } from "react-icons/io";
+import { TiHome } from "react-icons/ti";
+import { SiGoogledocs } from "react-icons/si";
+import { IoSettingsSharp } from "react-icons/io5";
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const location = useLocation();
   const navItems = [
-    { name: "Home", path: "/", icon: FiHome },
-    { name: "Exchange", path: "/exchange", icon: FiUsers },
-    { name: "Community", path: "/community", icon: FiMessageSquare },
-    { name: "Resources", path: "/resources", icon: FiBook },
-    { name: "Profile", path: "/profile", icon: FiSettings },
+    { name: "Home", path: "/", icon: TiHome },
+    { name: "Exchange", path: "/exchange", icon: RiExchangeBoxLine },
+    { name: "Sessions", path: "/sessions", icon: BsPersonVideo },
+    { name: "Community", path: "/community", icon: IoIosPeople },
+    { name: "Resources", path: "/resources", icon: SiGoogledocs },
+    { name: "Profile", path: "/profile", icon: IoSettingsSharp },
   ];
 
   return (
