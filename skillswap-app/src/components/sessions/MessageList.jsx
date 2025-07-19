@@ -3,7 +3,6 @@ import { format } from "date-fns";
 import { FiVideo, FiLink, FiFile } from "react-icons/fi";
 
 const MessageList = ({ messages, currentUserId, session }) => {
-  // Helper to check if session is active
   const isSessionTimeValid = () => {
     if (!session?.date || !session?.time || !session?.duration) return false;
     try {
@@ -19,7 +18,6 @@ const MessageList = ({ messages, currentUserId, session }) => {
     }
   };
 
-  // Safely format timestamp
   const formatTimestamp = (timestamp) => {
     try {
       return timestamp?.toDate
@@ -30,9 +28,7 @@ const MessageList = ({ messages, currentUserId, session }) => {
     }
   };
 
-  // Render message content based on type
   const renderMessageContent = (message) => {
-    // Safely extract message properties with defaults
     const {
       type = "text",
       text = "",
@@ -44,23 +40,24 @@ const MessageList = ({ messages, currentUserId, session }) => {
     } = message;
 
     switch (type) {
-      case "system":
+      case "video":
         return (
-          <>
-            <div className="text-center text-sm italic">{text}</div>
-            {meetingLink && isSessionTimeValid() && (
-              <div className="mt-2 text-center">
-                <a
-                  href={meetingLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-indigo-200 hover:text-white text-sm"
-                >
-                  <FiVideo className="mr-1" /> Join Meeting
-                </a>
-              </div>
-            )}
-          </>
+          <div className="space-y-2">
+            <p>{text}</p>
+            <a
+              href={meetingLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-3 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+            >
+              <FiVideo className="mr-2" />
+              Join Video Call
+            </a>
+            <p className="text-xs opacity-70 mt-1">
+              {senderId === currentUserId ? "You" : senderName} •{" "}
+              {formatTimestamp(message.timestamp)}
+            </p>
+          </div>
         );
 
       case "resource":
@@ -82,7 +79,7 @@ const MessageList = ({ messages, currentUserId, session }) => {
           </>
         );
 
-      default: // "text" or fallback
+      default:
         return (
           <>
             <p>{text}</p>

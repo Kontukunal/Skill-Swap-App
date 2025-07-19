@@ -9,6 +9,7 @@ import {
   doc,
   getDoc,
   addDoc,
+  updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
 import { toast } from "react-hot-toast";
@@ -129,55 +130,69 @@ const ExchangePage = () => {
 
   const handleSendRequest = async (requestData) => {
     try {
+      const existingExchangeQuery = query(
+        collection(db, "exchanges"),
+        where("participants", "array-contains", currentUser.uid)
+      );
+      const querySnapshot = await getDocs(existingExchangeQuery);
+
+      let exchangeRef;
+      let isNewExchange = true;
       const meetingLink = generateMeetingLink();
 
-      // Create exchange document
-      const exchangeRef = await addDoc(collection(db, "exchanges"), {
-        participants: [currentUser.uid, userProfile.uid],
-        requesterId: currentUser.uid,
-        requesterName: currentUser.displayName,
-        requesterPhoto: currentUser.photoURL,
-        recipientId: userProfile.uid,
-        recipientName: userProfile.displayName,
-        recipientPhoto: userProfile.photoURL,
-        skillToTeach: requestData.skillToTeach,
-        skillToLearn: requestData.skillToLearn,
-        status: "pending",
-        meetingLink,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+      // Find existing exchange
+      querySnapshot.forEach((doc) => {
+        const exchange = doc.data();
+        if (exchange.participants.includes(userProfile.uid)) {
+          exchangeRef = doc.ref;
+          isNewExchange = false;
+        }
       });
 
-      // Create system message (strict structure)
-      const systemMessage = {
-        type: "system",
-        text: `${currentUser.displayName} requested to exchange ${requestData.skillToTeach} for ${requestData.skillToLearn}`,
+      if (isNewExchange) {
+        exchangeRef = await addDoc(collection(db, "exchanges"), {
+          participants: [currentUser.uid, userProfile.uid],
+          requesterId: currentUser.uid,
+          requesterName: currentUser.displayName,
+          requesterPhoto: currentUser.photoURL,
+          recipientId: userProfile.uid,
+          recipientName: userProfile.displayName,
+          recipientPhoto: userProfile.photoURL,
+          skillToTeach: requestData.skillToTeach,
+          skillToLearn: requestData.skillToLearn,
+          status: "pending",
+          meetingLink,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        await updateDoc(exchangeRef, {
+          meetingLink,
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      // Add video call message
+      await addDoc(collection(db, "exchanges", exchangeRef.id, "messages"), {
+        type: "video",
+        text: `${currentUser.displayName} wants to exchange ${requestData.skillToTeach} for ${requestData.skillToLearn}`,
         meetingLink,
         timestamp: serverTimestamp(),
         senderId: currentUser.uid,
         senderName: currentUser.displayName,
         senderPhoto: currentUser.photoURL,
-      };
+      });
 
-      await addDoc(
-        collection(db, "exchanges", exchangeRef.id, "messages"),
-        systemMessage
-      );
-
-      // Create user message if provided (strict structure)
+      // Add user's message if provided
       if (requestData.message) {
-        const userMessage = {
+        await addDoc(collection(db, "exchanges", exchangeRef.id, "messages"), {
           type: "text",
           text: requestData.message,
           timestamp: serverTimestamp(),
           senderId: currentUser.uid,
           senderName: currentUser.displayName,
           senderPhoto: currentUser.photoURL,
-        };
-        await addDoc(
-          collection(db, "exchanges", exchangeRef.id, "messages"),
-          userMessage
-        );
+        });
       }
 
       // Send notification
@@ -190,11 +205,13 @@ const ExchangePage = () => {
         meetingLink
       );
 
-      toast.success("Request sent successfully!");
+      toast.success(
+        isNewExchange ? "Exchange request sent!" : "Added to existing exchange"
+      );
       setIsModalOpen(false);
     } catch (error) {
       console.error("Error sending request:", error);
-      toast.error("Failed to send request. Please check your permissions.");
+      toast.error("Failed to send request");
     }
   };
 
