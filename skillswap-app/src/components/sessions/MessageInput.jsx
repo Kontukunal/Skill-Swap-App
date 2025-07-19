@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { FiPaperclip, FiSend } from "react-icons/fi";
 
-const MessageInput = ({ onSendMessage, onSendResource, onScheduleSession }) => {
+const MessageInput = ({ onSendMessage, onSendResource }) => {
   const [message, setMessage] = useState("");
   const fileInputRef = useRef(null);
 
@@ -16,8 +16,6 @@ const MessageInput = ({ onSendMessage, onSendResource, onScheduleSession }) => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // In a real app, you would upload the file to storage first
-      // For this example, we'll just create a direct download link
       const fileUrl = URL.createObjectURL(file);
       onSendResource({
         url: fileUrl,

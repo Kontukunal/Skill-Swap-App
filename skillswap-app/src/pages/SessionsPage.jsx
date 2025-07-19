@@ -12,6 +12,8 @@ import {
   serverTimestamp,
   updateDoc,
   orderBy,
+  writeBatch,
+  getDocs,
 } from "firebase/firestore";
 import { useParams, useNavigate } from "react-router-dom";
 import ChatHeader from "../components/sessions/ChatHeader";
@@ -31,7 +33,7 @@ const SessionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch all sessions for the current user
+  // Fetch all unique sessions for the current user
   useEffect(() => {
     if (!currentUser) return;
 
@@ -42,7 +44,8 @@ const SessionsPage = () => {
     );
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const sessionsData = [];
+      const sessionsMap = new Map();
+
       for (const docSnapshot of snapshot.docs) {
         const session = { id: docSnapshot.id, ...docSnapshot.data() };
         const otherUserId = session.participants.find(
@@ -50,21 +53,31 @@ const SessionsPage = () => {
         );
 
         if (otherUserId) {
-          const userDoc = await getDoc(doc(db, "users", otherUserId));
-          if (userDoc.exists()) {
-            session.otherUser = userDoc.data();
+          if (sessionsMap.has(otherUserId)) {
+            const existingSession = sessionsMap.get(otherUserId);
+            sessionsMap.set(otherUserId, {
+              ...existingSession,
+              ...session,
+              lastMessage: session.lastMessage || existingSession.lastMessage,
+            });
+          } else {
+            const userDoc = await getDoc(doc(db, "users", otherUserId));
+            if (userDoc.exists()) {
+              session.otherUser = userDoc.data();
+            }
+            sessionsMap.set(otherUserId, session);
           }
         }
-        sessionsData.push(session);
       }
-      setSessions(sessionsData);
+
+      setSessions(Array.from(sessionsMap.values()));
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, [currentUser]);
 
-  // Set active session based on URL param or first session
+  // Set active session
   useEffect(() => {
     if (sessions.length > 0) {
       if (sessionId) {
@@ -98,7 +111,6 @@ const SessionsPage = () => {
   };
 
   // Fetch messages for active session
-  // In the message fetching useEffect:
   useEffect(() => {
     if (!activeSession) return;
 
@@ -108,34 +120,34 @@ const SessionsPage = () => {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const messagesData = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          type: data.type || "text",
-          text: data.text || "",
-          senderId: data.senderId || "",
-          timestamp: data.timestamp || serverTimestamp(),
-          senderName: data.senderName || "Unknown",
-          senderPhoto: data.senderPhoto || "",
-          meetingLink: data.meetingLink || null,
-          resourceTitle: data.resourceTitle || "",
-          resourceUrl: data.resourceUrl || "",
-        };
-      });
+      const messagesData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        type: doc.data().type || "text",
+        text: doc.data().text || "",
+        senderId: doc.data().senderId || "",
+        timestamp: doc.data().timestamp || serverTimestamp(),
+        senderName: doc.data().senderName || "Unknown",
+        senderPhoto: doc.data().senderPhoto || "",
+        meetingLink: doc.data().meetingLink || null,
+        resourceTitle: doc.data().resourceTitle || "",
+        resourceUrl: doc.data().resourceUrl || "",
+      }));
 
       setMessages(messagesData);
 
-      // Update last message for sidebar - only include primitive values
       if (messagesData.length > 0) {
         const lastMsg = messagesData[messagesData.length - 1];
-        const lastMessage = {
-          text: lastMsg.text,
-          timestamp: lastMsg.timestamp,
-        };
         setSessions((prev) =>
           prev.map((s) =>
-            s.id === activeSession.id ? { ...s, lastMessage } : s
+            s.id === activeSession.id
+              ? {
+                  ...s,
+                  lastMessage: {
+                    text: lastMsg.text,
+                    timestamp: lastMsg.timestamp,
+                  },
+                }
+              : s
           )
         );
       }
@@ -163,6 +175,32 @@ const SessionsPage = () => {
     }
   };
 
+  const handleClearChat = async () => {
+    if (
+      !activeSession ||
+      !window.confirm("Are you sure you want to clear this chat?")
+    )
+      return;
+
+    try {
+      const messagesQuery = query(
+        collection(db, "exchanges", activeSession.id, "messages")
+      );
+      const snapshot = await getDocs(messagesQuery);
+
+      const batch = writeBatch(db);
+      snapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+
+      await batch.commit();
+      toast.success("Chat cleared successfully");
+    } catch (error) {
+      console.error("Error clearing chat:", error);
+      toast.error("Failed to clear chat");
+    }
+  };
+
   const handleScheduleSession = async (sessionData) => {
     if (!activeSession) return;
 
@@ -178,12 +216,14 @@ const SessionsPage = () => {
         updatedAt: serverTimestamp(),
       });
 
-      // Add a system message about the scheduled session
       await addDoc(collection(db, "exchanges", activeSession.id, "messages"), {
-        type: "system",
+        type: "video",
         text: `Session scheduled for ${sessionData.date} at ${sessionData.time} (${sessionData.duration} minutes)`,
         meetingLink,
         timestamp: serverTimestamp(),
+        senderId: currentUser.uid,
+        senderName: currentUser.displayName,
+        senderPhoto: currentUser.photoURL,
       });
 
       toast.success("Session scheduled successfully!");
@@ -244,6 +284,7 @@ const SessionsPage = () => {
             session={activeSession}
             currentUser={currentUser}
             onScheduleSession={handleScheduleSession}
+            onClearChat={handleClearChat}
           />
 
           <MessageList
@@ -255,7 +296,6 @@ const SessionsPage = () => {
           <MessageInput
             onSendMessage={handleSendMessage}
             onSendResource={handleSendResource}
-            onScheduleSession={handleScheduleSession}
           />
         </div>
       ) : (
