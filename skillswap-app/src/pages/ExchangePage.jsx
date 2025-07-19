@@ -16,7 +16,11 @@ import { motion } from "framer-motion";
 import UserCard from "../components/exchange/UserCard";
 import ExchangeFilter from "../components/exchange/ExchangeFilter";
 import ExchangeRequestModal from "../components/exchange/ExchangeRequestModal";
-import { sendNotification } from "../services/notificationService";
+import {
+  sendExchangeRequestNotification,
+  sendExchangeConfirmationNotification,
+} from "../services/notificationService";
+import { generateMeetingLink } from "../utils/meetingUtils";
 
 const ExchangePage = () => {
   const { currentUser } = useAuth();
@@ -39,7 +43,6 @@ const ExchangePage = () => {
         const usersRef = collection(db, "users");
         let q = query(usersRef, where("uid", "!=", currentUser.uid));
 
-        // Apply only one filter at a time to avoid the ARRAY_CONTAINS error
         if (filters.teach && !filters.learn) {
           q = query(q, where("skillsToTeach", "array-contains", filters.teach));
         } else if (filters.learn && !filters.teach) {
@@ -68,15 +71,12 @@ const ExchangePage = () => {
 
     return users
       .filter((user) => {
-        // Check if user has skills I want to learn AND wants to learn skills I have
         const hasSkillsIWant = currentUser.skillsToLearn.some((skill) =>
           user.skillsToTeach?.includes(skill)
         );
-
         const wantsSkillsIHave = user.skillsToLearn?.some((skill) =>
           currentUser.skillsToTeach.includes(skill)
         );
-
         return hasSkillsIWant && wantsSkillsIHave;
       })
       .map((user) => ({
@@ -88,17 +88,12 @@ const ExchangePage = () => {
 
   const calculateMatchScore = (user1, user2) => {
     let score = 0;
-
-    // Skills match
     user1.skillsToLearn.forEach((skill) => {
       if (user2.skillsToTeach?.includes(skill)) score += 10;
     });
-
     user2.skillsToLearn?.forEach((skill) => {
       if (user1.skillsToTeach.includes(skill)) score += 10;
     });
-
-    // Location bonus
     if (
       user1.location &&
       user2.location &&
@@ -106,7 +101,6 @@ const ExchangePage = () => {
     ) {
       score += 5;
     }
-
     return score;
   };
 
@@ -124,7 +118,6 @@ const ExchangePage = () => {
   };
 
   const handleFilterChange = (newFilters) => {
-    // Ensure we don't filter by both skills at once
     if (newFilters.teach && newFilters.learn) {
       toast.error(
         "Please filter by either 'I can teach' or 'I want to learn' at a time"
@@ -134,42 +127,75 @@ const ExchangePage = () => {
     setFilters(newFilters);
   };
 
-  // Add this to your handleSendRequest function in ExchangePage.jsx
   const handleSendRequest = async (requestData) => {
     try {
-      // Generate meeting link
       const meetingLink = generateMeetingLink();
 
-      // Create exchange session with meeting link
+      // Create exchange document
       const exchangeRef = await addDoc(collection(db, "exchanges"), {
-        ...requestData,
-        meetingLink,
+        participants: [currentUser.uid, userProfile.uid],
+        requesterId: currentUser.uid,
+        requesterName: currentUser.displayName,
+        requesterPhoto: currentUser.photoURL,
+        recipientId: userProfile.uid,
+        recipientName: userProfile.displayName,
+        recipientPhoto: userProfile.photoURL,
+        skillToTeach: requestData.skillToTeach,
+        skillToLearn: requestData.skillToLearn,
         status: "pending",
+        meetingLink,
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
 
-      // Send notification with meeting link
-      await sendNotification({
-        userId: userProfile.uid,
-        title: "New Exchange Request",
-        message: `${currentUser.displayName} wants to exchange ${requestData.skillToTeach} for ${requestData.skillToLearn}`,
-        type: "exchange_request",
-        relatedId: exchangeRef.id,
+      // Create system message (strict structure)
+      const systemMessage = {
+        type: "system",
+        text: `${currentUser.displayName} requested to exchange ${requestData.skillToTeach} for ${requestData.skillToLearn}`,
         meetingLink,
-      });
+        timestamp: serverTimestamp(),
+        senderId: currentUser.uid,
+        senderName: currentUser.displayName,
+        senderPhoto: currentUser.photoURL,
+      };
+
+      await addDoc(
+        collection(db, "exchanges", exchangeRef.id, "messages"),
+        systemMessage
+      );
+
+      // Create user message if provided (strict structure)
+      if (requestData.message) {
+        const userMessage = {
+          type: "text",
+          text: requestData.message,
+          timestamp: serverTimestamp(),
+          senderId: currentUser.uid,
+          senderName: currentUser.displayName,
+          senderPhoto: currentUser.photoURL,
+        };
+        await addDoc(
+          collection(db, "exchanges", exchangeRef.id, "messages"),
+          userMessage
+        );
+      }
+
+      // Send notification
+      await sendExchangeRequestNotification(
+        userProfile.uid,
+        currentUser.displayName,
+        requestData.skillToTeach,
+        requestData.skillToLearn,
+        exchangeRef.id,
+        meetingLink
+      );
 
       toast.success("Request sent successfully!");
       setIsModalOpen(false);
     } catch (error) {
       console.error("Error sending request:", error);
-      toast.error("Failed to send request");
+      toast.error("Failed to send request. Please check your permissions.");
     }
-  };
-
-  const generateMeetingLink = () => {
-    // Generate a Google Meet link (you can replace with your preferred platform)
-    const randomId = Math.random().toString(36).substring(2, 10);
-    return `https://meet.google.com/new?hs=181&authuser=0&tf=0&nv=1&s=${randomId}`;
   };
 
   const matches = findSkillMatches();

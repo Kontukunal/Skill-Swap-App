@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNotifications } from "../../hooks/useNotifications";
 import { useAuth } from "../../contexts/AuthContext";
-import { FiBell, FiCheck, FiClock } from "react-icons/fi";
+import { FiBell, FiCheck, FiClock, FiVideo, FiUser } from "react-icons/fi";
 import { motion } from "framer-motion";
 import { db } from "../../config/firebase";
 import { doc, updateDoc } from "firebase/firestore";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const NotificationBell = () => {
   const { currentUser } = useAuth();
@@ -14,6 +14,7 @@ const NotificationBell = () => {
   );
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -29,7 +30,30 @@ const NotificationBell = () => {
     };
   }, []);
 
-  const handleMarkAsRead = async (notificationId) => {
+  const handleNotificationClick = async (notification) => {
+    try {
+      // Mark as read if not already read
+      if (!notification.read) {
+        await markAsRead(notification.id);
+      }
+
+      // Navigate based on notification type
+      if (notification.type === "exchange") {
+        navigate(`/exchanges/${notification.relatedId}`);
+      } else if (notification.type === "session") {
+        navigate(`/sessions/${notification.relatedId}`);
+      } else if (notification.meetingLink) {
+        window.open(notification.meetingLink, "_blank");
+      }
+
+      setIsOpen(false);
+    } catch (error) {
+      console.error("Error handling notification click:", error);
+    }
+  };
+
+  const handleMarkAsRead = async (notificationId, e) => {
+    e.stopPropagation(); // Prevent triggering the parent click handler
     try {
       await markAsRead(notificationId);
     } catch (error) {
@@ -42,6 +66,7 @@ const NotificationBell = () => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 relative"
+        aria-label="Notifications"
       >
         <FiBell className="h-5 w-5 text-gray-600 dark:text-gray-300" />
         {unreadCount > 0 && (
@@ -55,67 +80,75 @@ const NotificationBell = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700"
+          className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700"
         >
           <div className="py-1">
-            <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 font-medium text-gray-700 dark:text-gray-300 flex justify-between items-center">
-              <span>Notifications</span>
-              <Link
-                to="/notifications"
-                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
-                onClick={() => setIsOpen(false)}
-              >
-                View All
-              </Link>
+            <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 font-medium text-gray-700 dark:text-gray-300">
+              Notifications
             </div>
             {notifications.length === 0 ? (
               <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                 No new notifications
               </div>
             ) : (
-              <div className="max-h-60 overflow-y-auto">
-                {notifications.map((notification) => (
+              <div className="max-h-96 overflow-y-auto">
+                {notifications.slice(0, 5).map((notification) => (
                   <div
                     key={notification.id}
-                    className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    onClick={() => handleNotificationClick(notification)}
+                    className={`px-4 py-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
+                      !notification.read ? "bg-blue-50 dark:bg-gray-700" : ""
+                    }`}
                   >
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium text-gray-900 dark:text-white">
                           {notification.title}
                         </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                           {notification.message}
                         </p>
-                        {notification.type === "exchange_request" && (
-                          <a
-                            href={notification.meetingLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-1 inline-flex items-center text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
-                          >
-                            <FiClock className="mr-1" /> Join Meeting
-                          </a>
+                        {notification.meetingLink && (
+                          <div className="mt-2">
+                            <span className="inline-flex items-center text-sm text-indigo-600 dark:text-indigo-400">
+                              <FiVideo className="mr-1" /> Meeting Available
+                            </span>
+                          </div>
                         )}
                       </div>
-                      <button
-                        onClick={() => handleMarkAsRead(notification.id)}
-                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                        title="Mark as read"
-                      >
-                        <FiCheck className="h-4 w-4" />
-                      </button>
+                      {!notification.read && (
+                        <button
+                          onClick={(e) => handleMarkAsRead(notification.id, e)}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          aria-label="Mark as read"
+                        >
+                          <FiCheck className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {new Date(
-                        notification.createdAt?.toDate()
-                      ).toLocaleString()}
-                    </p>
+                    <div className="flex justify-between items-center mt-1">
+                      <p className="text-xs text-gray-400">
+                        {new Date(
+                          notification.createdAt?.toDate()
+                        ).toLocaleString()}
+                      </p>
+                      {!notification.read && (
+                        <span className="inline-block h-2 w-2 rounded-full bg-blue-500"></span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             )}
+            <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 text-center">
+              <Link
+                to="/notifications"
+                className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
+                onClick={() => setIsOpen(false)}
+              >
+                View All Notifications
+              </Link>
+            </div>
           </div>
         </motion.div>
       )}
