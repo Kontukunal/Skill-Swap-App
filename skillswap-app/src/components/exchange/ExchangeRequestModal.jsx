@@ -1,27 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment } from "react";
 import {
   FiX,
   FiClock,
   FiCalendar,
   FiMessageSquare,
   FiVideo,
+  FiUser,
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
-import { db } from "../../config/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { generateMeetingLink } from "../../utils/meetingUtils";
-import { useNavigate } from "react-router-dom";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const ExchangeRequestModal = ({ user, onClose, currentUser, onSubmit }) => {
+  const { theme } = useTheme();
   const [isOpen, setIsOpen] = useState(true);
   const [message, setMessage] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [duration, setDuration] = useState("30");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const navigate = useNavigate();
 
   const closeModal = () => {
     setIsOpen(false);
@@ -37,24 +35,17 @@ const ExchangeRequestModal = ({ user, onClose, currentUser, onSubmit }) => {
 
     setIsSubmitting(true);
     try {
-      // Generate meeting link
       const meetingLink = generateMeetingLink();
-
-      // Prepare request data
       const requestData = {
         message,
         date,
         time,
         duration: parseInt(duration),
-        meetingLink, // Include the generated meeting link
+        meetingLink,
       };
-
-      // Call parent's onSubmit handler with all data
       await onSubmit(requestData);
-
       closeModal();
     } catch (error) {
-      console.error("Error scheduling call:", error);
       toast.error(error.message || "Failed to schedule call");
     } finally {
       setIsSubmitting(false);
@@ -73,7 +64,7 @@ const ExchangeRequestModal = ({ user, onClose, currentUser, onSubmit }) => {
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-25" />
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-y-auto">
@@ -87,42 +78,59 @@ const ExchangeRequestModal = ({ user, onClose, currentUser, onSubmit }) => {
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
+              <Dialog.Panel
+                className={`w-full max-w-md transform overflow-hidden rounded-2xl p-6 text-left align-middle shadow-xl transition-all ${theme.mode === "dark" ? "bg-gray-800/80" : "bg-white/80"} backdrop-blur-lg border ${theme.mode === "dark" ? "border-gray-700" : "border-gray-200"}`}
+              >
                 <div className="flex justify-between items-center">
-                  <Dialog.Title className="text-lg font-medium text-gray-900 dark:text-white">
-                    Schedule Meeting
+                  <Dialog.Title className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600">
+                    Schedule Exchange
                   </Dialog.Title>
                   <button
                     onClick={closeModal}
-                    className="text-gray-400 hover:text-gray-500"
+                    className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
                   >
                     <FiX className="h-6 w-6" />
                   </button>
                 </div>
 
-                <div className="mt-4">
-                  <div className="flex items-center space-x-4 mb-4">
-                    <img
-                      className="h-12 w-12 rounded-full"
-                      src={user.photoURL || ""}
-                      alt={user.displayName}
-                    />
+                <div className="mt-6">
+                  <div
+                    className={`flex items-center space-x-4 mb-6 p-4 rounded-xl ${theme.mode === "dark" ? "bg-gray-700/20" : "bg-gray-100/50"} backdrop-blur-sm`}
+                  >
+                    <div className="relative">
+                      <img
+                        className="h-14 w-14 rounded-full object-cover border-2 border-white/20"
+                        src={user.photoURL || ""}
+                        alt={user.displayName}
+                      />
+                      <div className="absolute -bottom-1 -right-1 bg-indigo-500 rounded-full p-1">
+                        <FiUser className="h-3 w-3 text-white" />
+                      </div>
+                    </div>
                     <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-white">
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
                         {user.displayName || "Anonymous"}
                       </h4>
+                      <p className="text-sm text-indigo-500 dark:text-indigo-400">
+                        Skill Exchange Partner
+                      </p>
                     </div>
                   </div>
 
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <FiMessageSquare className="inline mr-2" />
                         Message (Optional)
                       </label>
                       <textarea
                         rows={3}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                        placeholder={`Hi ${user.displayName || "there"}, I'd like to schedule a meeting...`}
+                        className={`mt-1 block w-full rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                          theme.mode === "dark"
+                            ? "bg-gray-700/50 border-gray-600 text-white"
+                            : "bg-white/80 border-gray-200 text-gray-900"
+                        } border`}
+                        placeholder={`Hi ${user.displayName || "there"}, I'd like to exchange...`}
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
                       />
@@ -130,82 +138,93 @@ const ExchangeRequestModal = ({ user, onClose, currentUser, onSubmit }) => {
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <FiCalendar className="inline mr-2" />
                           Date
                         </label>
-                        <div className="mt-1 relative rounded-md shadow-sm">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <FiCalendar className="h-5 w-5 text-gray-400" />
-                          </div>
-                          <input
-                            type="date"
-                            className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
-                            value={date}
-                            onChange={(e) => setDate(e.target.value)}
-                            min={new Date().toISOString().split("T")[0]}
-                            required
-                          />
-                        </div>
+                        <input
+                          type="date"
+                          className={`block w-full rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                            theme.mode === "dark"
+                              ? "bg-gray-700/50 border-gray-600 text-white"
+                              : "bg-white/80 border-gray-200 text-gray-900"
+                          } border`}
+                          value={date}
+                          onChange={(e) => setDate(e.target.value)}
+                          min={new Date().toISOString().split("T")[0]}
+                          required
+                        />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <FiClock className="inline mr-2" />
                           Time
                         </label>
-                        <div className="mt-1 relative rounded-md shadow-sm">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <FiClock className="h-5 w-5 text-gray-400" />
-                          </div>
-                          <input
-                            type="time"
-                            className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
-                            value={time}
-                            onChange={(e) => setTime(e.target.value)}
-                            required
-                          />
-                        </div>
+                        <input
+                          type="time"
+                          className={`block w-full rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                            theme.mode === "dark"
+                              ? "bg-gray-700/50 border-gray-600 text-white"
+                              : "bg-white/80 border-gray-200 text-gray-900"
+                          } border`}
+                          value={time}
+                          onChange={(e) => setTime(e.target.value)}
+                          required
+                        />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Duration (minutes)
                       </label>
                       <select
-                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                        className={`block w-full rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                          theme.mode === "dark"
+                            ? "bg-gray-700/50 border-gray-600 text-white"
+                            : "bg-white/80 border-gray-200 text-gray-900"
+                        } border`}
                         value={duration}
                         onChange={(e) => setDuration(e.target.value)}
                         required
                       >
-                        <option value="30">30</option>
-                        <option value="45">45</option>
-                        <option value="60">60</option>
-                        <option value="90">90</option>
-                        <option value="120">120</option>
+                        <option value="30">30 minutes</option>
+                        <option value="45">45 minutes</option>
+                        <option value="60">1 hour</option>
+                        <option value="90">1.5 hours</option>
+                        <option value="120">2 hours</option>
                       </select>
                     </div>
 
-                    <div className="flex items-center text-sm text-indigo-600">
-                      <FiVideo className="mr-2" />
+                    <div
+                      className={`flex items-center text-sm text-indigo-600 dark:text-indigo-400 p-3 rounded-lg ${theme.mode === "dark" ? "bg-indigo-900/30" : "bg-indigo-50"}`}
+                    >
+                      <FiVideo className="mr-2 flex-shrink-0" />
                       <span>
-                        A video meeting link will be generated automatically
+                        A secure video meeting link will be generated
+                        automatically
                       </span>
                     </div>
 
-                    <div className="mt-6 flex justify-end space-x-3">
+                    <div className="mt-6 flex justify-end gap-3">
                       <button
                         type="button"
                         onClick={closeModal}
-                        className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                          theme.mode === "dark"
+                            ? "bg-gray-700/50 text-gray-200 hover:bg-gray-700"
+                            : "bg-white text-gray-700 hover:bg-gray-50"
+                        } shadow-sm`}
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                        className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none"
                       >
-                        {isSubmitting ? "Scheduling..." : "Schedule Meeting"}
+                        {isSubmitting ? "Scheduling..." : "Schedule Exchange"}
                       </button>
                     </div>
                   </form>

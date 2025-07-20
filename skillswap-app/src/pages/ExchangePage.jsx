@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
 import { db } from "../config/firebase";
 import {
   collection,
@@ -8,24 +9,19 @@ import {
   getDocs,
   doc,
   getDoc,
-  addDoc,
-  updateDoc,
-  serverTimestamp,
 } from "firebase/firestore";
 import { toast } from "react-hot-toast";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import UserCard from "../components/exchange/UserCard";
 import ExchangeFilter from "../components/exchange/ExchangeFilter";
 import ExchangeRequestModal from "../components/exchange/ExchangeRequestModal";
-import {
-  sendExchangeRequestNotification,
-  sendExchangeConfirmationNotification,
-} from "../services/notificationService";
 import { generateMeetingLink } from "../utils/meetingUtils";
+import { FiFilter, FiUsers, FiStar, FiSearch } from "react-icons/fi";
 
 const ExchangePage = () => {
   const { currentUser } = useAuth();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +34,7 @@ const ExchangePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const [showMatches, setShowMatches] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -68,30 +65,6 @@ const ExchangePage = () => {
 
     fetchUsers();
   }, [currentUser, filters]);
-
-  const findMatchingSkills = (currentUser, otherUser) => {
-    if (!currentUser?.skillsToTeach || !otherUser?.skillsToLearn) return null;
-
-    const potentialSkillsToTeach = currentUser.skillsToTeach.filter((skill) =>
-      otherUser.skillsToLearn.includes(skill)
-    );
-
-    const potentialSkillsToLearn = otherUser.skillsToTeach.filter((skill) =>
-      currentUser.skillsToLearn.includes(skill)
-    );
-
-    if (
-      potentialSkillsToTeach.length === 0 ||
-      potentialSkillsToLearn.length === 0
-    ) {
-      return null;
-    }
-
-    return {
-      skillToTeach: potentialSkillsToTeach[0],
-      skillToLearn: potentialSkillsToLearn[0],
-    };
-  };
 
   const findSkillMatches = () => {
     if (!currentUser?.skillsToTeach || !currentUser?.skillsToLearn) return [];
@@ -152,6 +125,7 @@ const ExchangePage = () => {
       return;
     }
     setFilters(newFilters);
+    setShowFilters(false);
   };
 
   const handleSendRequest = async (requestData) => {
@@ -160,95 +134,27 @@ const ExchangePage = () => {
         throw new Error("Recipient user data is not available");
       }
 
-      const existingExchangeQuery = query(
-        collection(db, "exchanges"),
-        where("participants", "array-contains", currentUser.uid)
-      );
-      const querySnapshot = await getDocs(existingExchangeQuery);
-
-      let exchangeRef;
-      let isNewExchange = true;
-      const meetingLink = requestData.meetingLink; // Use the link from requestData
-
-      // Find existing exchange
-      querySnapshot.forEach((doc) => {
-        const exchange = doc.data();
-        if (exchange.participants.includes(userProfile.uid)) {
-          exchangeRef = doc.ref;
-          isNewExchange = false;
-        }
-      });
-
-      if (isNewExchange) {
-        exchangeRef = await addDoc(collection(db, "exchanges"), {
-          participants: [currentUser.uid, userProfile.uid],
-          requesterId: currentUser.uid,
-          requesterName: currentUser.displayName,
-          requesterPhoto: currentUser.photoURL,
-          recipientId: userProfile.uid,
-          recipientName: userProfile.displayName,
-          recipientPhoto: userProfile.photoURL,
-          status: "pending",
-          meetingLink,
-          date: requestData.date,
-          time: requestData.time,
-          duration: requestData.duration,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      } else {
-        await updateDoc(exchangeRef, {
-          meetingLink,
-          date: requestData.date,
-          time: requestData.time,
-          duration: requestData.duration,
-          updatedAt: serverTimestamp(),
-        });
-      }
-
-      // Create detailed meeting message
-      const meetingMessage = `Meeting scheduled for ${requestData.date} at ${requestData.time} (${requestData.duration} minutes)`;
-
-      // Add video call message with all details
-      await addDoc(collection(db, "exchanges", exchangeRef.id, "messages"), {
-        type: "video",
-        text: meetingMessage,
+      const meetingLink = generateMeetingLink();
+      const exchangeData = {
+        participants: [currentUser.uid, userProfile.uid],
+        requesterId: currentUser.uid,
+        requesterName: currentUser.displayName,
+        requesterPhoto: currentUser.photoURL,
+        recipientId: userProfile.uid,
+        recipientName: userProfile.displayName,
+        recipientPhoto: userProfile.photoURL,
+        status: "pending",
         meetingLink,
         date: requestData.date,
         time: requestData.time,
         duration: requestData.duration,
-        timestamp: serverTimestamp(),
-        senderId: currentUser.uid,
-        senderName: currentUser.displayName,
-        senderPhoto: currentUser.photoURL,
-      });
+        message: requestData.message,
+        createdAt: new Date(),
+      };
 
-      // Add user's custom message if provided
-      if (requestData?.message) {
-        await addDoc(collection(db, "exchanges", exchangeRef.id, "messages"), {
-          type: "text",
-          text: requestData.message,
-          timestamp: serverTimestamp(),
-          senderId: currentUser.uid,
-          senderName: currentUser.displayName,
-          senderPhoto: currentUser.photoURL,
-        });
-      }
-
-      // Send notification with meeting details
-      await sendExchangeRequestNotification(
-        userProfile.uid,
-        currentUser.displayName,
-        exchangeRef.id,
-        meetingLink,
-        meetingMessage 
-      );
-
-      toast.success(
-        isNewExchange ? "Meeting request sent!" : "Added to existing exchange"
-      );
+      navigate("/sessions", { state: { newExchange: exchangeData } });
+      toast.success("Meeting request created!");
       setIsModalOpen(false);
-      navigate(`/sessions/${exchangeRef.id}`);
     } catch (error) {
       console.error("Error sending request:", error);
       toast.error(error?.message || "Failed to send request");
@@ -258,89 +164,177 @@ const ExchangePage = () => {
   const matches = findSkillMatches();
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Find Skill Exchange Partners
-        </h1>
-        <p className="mt-2 text-sm text-gray-700 dark:text-gray-400">
-          Connect with people who want to share their skills and learn from you.
-        </p>
-      </div>
-
-      <div className="mb-6">
-        <ExchangeFilter
-          currentFilters={filters}
-          onChange={handleFilterChange}
-        />
-      </div>
-
-      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setShowMatches(false)}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              !showMatches
-                ? "border-indigo-500 text-indigo-600"
-                : "border-transparent text-gray-500"
-            }`}
-          >
-            Browse All
-          </button>
-          <button
-            onClick={() => setShowMatches(true)}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              showMatches
-                ? "border-indigo-500 text-indigo-600"
-                : "border-transparent text-gray-500"
-            }`}
-          >
-            Recommended Matches
-          </button>
-        </nav>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-        </div>
-      ) : showMatches ? (
-        matches.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {matches.map(({ user, score }) => (
-              <UserCard
-                key={user.id || user.uid}
-                user={user}
-                score={score}
-                onClick={() => handleUserClick(user)}
-              />
-            ))}
-          </div>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Futuristic floating background elements */}
+      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+        {theme.mode === "dark" ? (
+          <>
+            <div className="absolute top-1/4 -left-20 w-96 h-96 rounded-full bg-indigo-900/20 blur-3xl animate-blob"></div>
+            <div className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full bg-purple-900/20 blur-3xl animate-blob animation-delay-2000"></div>
+            <div className="absolute top-2/3 left-1/3 w-64 h-64 rounded-full bg-pink-900/15 blur-3xl animate-blob animation-delay-4000"></div>
+          </>
         ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500">
-              No skill matches found. Make sure you've added skills you can
-              teach and want to learn in your profile.
-            </p>
+          <>
+            <div className="absolute top-1/4 -left-20 w-96 h-96 rounded-full bg-indigo-100/40 blur-3xl animate-blob"></div>
+            <div className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full bg-purple-100/40 blur-3xl animate-blob animation-delay-2000"></div>
+            <div className="absolute top-2/3 left-1/3 w-64 h-64 rounded-full bg-pink-100/30 blur-3xl animate-blob animation-delay-4000"></div>
+          </>
+        )}
+      </div>
+
+      {/* Main content with glass morphism */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="glass p-8 rounded-3xl mb-12"
+        >
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600 dark:from-indigo-400 dark:to-purple-400 mb-2">
+                Skill Exchange Network
+              </h1>
+              <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
+                Connect with people who want to share their skills and learn
+                from you.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                  showFilters
+                    ? "bg-indigo-600 text-white shadow-lg"
+                    : theme.mode === "dark"
+                      ? "bg-gray-700/50 text-gray-200 hover:bg-gray-700"
+                      : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <FiFilter className="h-5 w-5" />
+                {showFilters ? "Hide Filters" : "Show Filters"}
+              </button>
+
+              <button
+                onClick={() => setShowMatches(!showMatches)}
+                className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                  showMatches
+                    ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg"
+                    : theme.mode === "dark"
+                      ? "bg-gray-700/50 text-gray-200 hover:bg-gray-700"
+                      : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <FiStar className="h-5 w-5" />
+                {showMatches ? "Show All" : "Show Matches"}
+              </button>
+            </div>
           </div>
-        )
-      ) : users.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {users.map((user) => (
-            <UserCard
-              key={user.id || user.uid}
-              user={user}
-              onClick={() => handleUserClick(user)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-gray-500">
-            No users found matching your criteria. Try adjusting your filters.
-          </p>
-        </div>
-      )}
+
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="mt-6 overflow-hidden"
+              >
+                <ExchangeFilter
+                  currentFilters={filters}
+                  onChange={handleFilterChange}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* User cards grid */}
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-500"></div>
+          </div>
+        ) : showMatches ? (
+          matches.length > 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            >
+              {matches.map(({ user, score }) => (
+                <motion.div
+                  key={user.id || user.uid}
+                  whileHover={{ y: -5 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <UserCard
+                    user={user}
+                    score={score}
+                    onClick={() => handleUserClick(user)}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : (
+            <div className="glass p-12 rounded-3xl text-center">
+              <div className="mx-auto h-24 w-24 bg-indigo-100/50 dark:bg-indigo-900/20 rounded-full flex items-center justify-center mb-6">
+                <FiUsers className="h-12 w-12 text-indigo-500 dark:text-indigo-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+                No matches found
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto">
+                We couldn't find any skill matches. Try adjusting your profile
+                skills or browse all users instead.
+              </p>
+              <button
+                onClick={() => setShowMatches(false)}
+                className="mt-6 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+              >
+                Browse All Users
+              </button>
+            </div>
+          )
+        ) : users.length > 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+          >
+            {users.map((user) => (
+              <motion.div
+                key={user.id || user.uid}
+                whileHover={{ y: -5 }}
+                transition={{ duration: 0.2 }}
+              >
+                <UserCard user={user} onClick={() => handleUserClick(user)} />
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : (
+          <div className="glass p-12 rounded-3xl text-center">
+            <div className="mx-auto h-24 w-24 bg-indigo-100/50 dark:bg-indigo-900/20 rounded-full flex items-center justify-center mb-6">
+              <FiSearch className="h-12 w-12 text-indigo-500 dark:text-indigo-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+              No users found
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto">
+              Try adjusting your filters or check back later as more users join
+              the platform.
+            </p>
+            <button
+              onClick={() => setFilters({ teach: "", learn: "", location: "" })}
+              className="mt-6 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+            >
+              Reset Filters
+            </button>
+          </div>
+        )}
+      </div>
 
       {isModalOpen && userProfile && (
         <ExchangeRequestModal
@@ -348,7 +342,6 @@ const ExchangePage = () => {
           onClose={() => setIsModalOpen(false)}
           currentUser={currentUser}
           onSubmit={handleSendRequest}
-          // Remove skill selection props if they're no longer needed
         />
       )}
     </div>

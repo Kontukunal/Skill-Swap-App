@@ -1,14 +1,21 @@
 import React, { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTheme } from "../../contexts/ThemeContext";
 import { Menu, Transition } from "@headlessui/react";
-import { FiMenu, FiUser, FiLogOut, FiSun, FiMoon } from "react-icons/fi";
+import {
+  FiMenu,
+  FiUser,
+  FiLogOut,
+  FiSun,
+  FiMoon,
+  FiBell,
+} from "react-icons/fi";
 import Logo from "../../assets/logo.svg";
-import NotificationBell from "../notifications/NotificationBell";
 
 const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
   const { currentUser, logout } = useAuth();
-  const [darkMode, setDarkMode] = useState(false);
+  const { theme, toggleTheme } = useTheme();
   const [showMenuButton, setShowMenuButton] = useState(false);
 
   useEffect(() => {
@@ -22,12 +29,10 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
     return () => window.removeEventListener("resize", checkScreenSize);
   }, [currentUser, sidebarOpen]);
 
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
-  }, [darkMode]);
-
   return (
-    <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40">
+    <header
+      className={`sticky top-0 z-50 ${theme.mode === "dark" ? "bg-gray-800/80 border-b border-gray-700" : "bg-white/80 border-b border-gray-200"} backdrop-blur-md transition-colors duration-300`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           {/* Left section */}
@@ -36,7 +41,7 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
             {showMenuButton && (
               <button
                 type="button"
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 mr-2"
+                className={`inline-flex items-center justify-center p-2 rounded-md ${theme.mode === "dark" ? "text-gray-400 hover:text-gray-300 hover:bg-gray-700" : "text-gray-500 hover:text-gray-600 hover:bg-gray-100"} focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 mr-2 transition-colors duration-200`}
                 onClick={() => setSidebarOpen(true)}
                 aria-label="Open sidebar"
               >
@@ -47,10 +52,12 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
             {/* Logo - always visible */}
             <Link
               to="/"
-              className="flex items-center hover:opacity-80 transition-opacity"
+              className="flex items-center hover:opacity-80 transition-opacity duration-200"
             >
               <img className="h-8 w-auto" src={Logo} alt="SkillSwap" />
-              <span className="ml-2 text-xl font-bold text-gray-800 dark:text-white">
+              <span
+                className={`ml-2 text-xl font-bold ${theme.mode === "dark" ? "text-white" : "text-gray-800"}`}
+              >
                 SkillSwap
               </span>
             </Link>
@@ -60,13 +67,15 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
           <div className="flex items-center space-x-4">
             {/* Dark mode toggle */}
             <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              onClick={toggleTheme}
+              className={`p-2 rounded-full ${theme.mode === "dark" ? "text-gray-400 hover:text-gray-300 hover:bg-gray-700" : "text-gray-500 hover:text-gray-600 hover:bg-gray-100"} transition-colors duration-200`}
               aria-label={
-                darkMode ? "Switch to light mode" : "Switch to dark mode"
+                theme.mode === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
               }
             >
-              {darkMode ? (
+              {theme.mode === "dark" ? (
                 <FiSun className="h-5 w-5" />
               ) : (
                 <FiMoon className="h-5 w-5" />
@@ -74,13 +83,20 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
             </button>
 
             {/* Notification bell */}
-            {currentUser && <NotificationBell />}
+            {currentUser && (
+              <button
+                className={`p-2 rounded-full relative ${theme.mode === "dark" ? "text-gray-400 hover:text-gray-300 hover:bg-gray-700" : "text-gray-500 hover:text-gray-600 hover:bg-gray-100"} transition-colors duration-200`}
+              >
+                <FiBell className="h-5 w-5" />
+                <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+              </button>
+            )}
 
             {/* User menu or auth buttons */}
             {currentUser ? (
               <Menu as="div" className="relative">
                 <Menu.Button className="flex items-center space-x-2 focus:outline-none">
-                  <div className="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-medium">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium shadow-md">
                     {currentUser.displayName
                       ? currentUser.displayName.charAt(0).toUpperCase()
                       : currentUser.email.charAt(0).toUpperCase()}
@@ -95,15 +111,20 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
                   leaveFrom="transform opacity-100 scale-100"
                   leaveTo="transform opacity-0 scale-95"
                 >
-                  <Menu.Items className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
-                    {/* PROFILE LINK - This is your profile menu item */}
+                  <Menu.Items
+                    className={`origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 ${theme.mode === "dark" ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"} ring-1 ring-black ring-opacity-5 focus:outline-none z-50`}
+                  >
                     <Menu.Item>
                       {({ active }) => (
                         <Link
                           to="/profile"
-                          className={`${
-                            active ? "bg-gray-100 dark:bg-gray-700" : ""
-                          } block px-4 py-2 text-sm text-gray-700 dark:text-gray-300`}
+                          className={`block px-4 py-2 text-sm transition-colors duration-200 ${
+                            active
+                              ? theme.mode === "dark"
+                                ? "bg-gray-700"
+                                : "bg-gray-100"
+                              : ""
+                          } ${theme.mode === "dark" ? "text-gray-300" : "text-gray-700"}`}
                         >
                           <div className="flex items-center">
                             <FiUser className="mr-2" />
@@ -112,15 +133,17 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
                         </Link>
                       )}
                     </Menu.Item>
-
-                    {/* Logout button */}
                     <Menu.Item>
                       {({ active }) => (
                         <button
                           onClick={logout}
-                          className={`${
-                            active ? "bg-gray-100 dark:bg-gray-700" : ""
-                          } w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300`}
+                          className={`w-full text-left px-4 py-2 text-sm transition-colors duration-200 ${
+                            active
+                              ? theme.mode === "dark"
+                                ? "bg-gray-700"
+                                : "bg-gray-100"
+                              : ""
+                          } ${theme.mode === "dark" ? "text-gray-300" : "text-gray-700"}`}
                         >
                           <div className="flex items-center">
                             <FiLogOut className="mr-2" />
@@ -136,13 +159,13 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
               <div className="flex space-x-2">
                 <Link
                   to="/login"
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  className={`px-4 py-2 text-sm font-medium ${theme.mode === "dark" ? "text-gray-300 hover:text-indigo-400" : "text-gray-700 hover:text-indigo-600"} transition-colors duration-200`}
                 >
                   Sign in
                 </Link>
                 <Link
                   to="/register"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-purple-500 rounded-md hover:from-indigo-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-md"
                 >
                   Sign up
                 </Link>
