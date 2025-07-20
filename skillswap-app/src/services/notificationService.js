@@ -29,19 +29,24 @@ export const sendNotification = async ({
 export const sendExchangeRequestNotification = async (
   recipientId,
   senderName,
-  skillToTeach,
-  skillToLearn,
   exchangeId,
-  meetingLink
+  meetingLink,
+  meetingDetails
 ) => {
-  return sendNotification({
-    userId: recipientId,
-    title: "New Exchange Request",
-    message: `${senderName} wants to exchange ${skillToTeach} for ${skillToLearn}`,
-    type: "exchange_request",
-    relatedId: exchangeId,
-    meetingLink,
-  });
+  try {
+    await addDoc(collection(db, "notifications"), {
+      userId: recipientId,
+      type: "exchange_request",
+      title: "New Meeting Request",
+      message: `${senderName} scheduled a meeting: ${meetingDetails}`,
+      exchangeId,
+      meetingLink,
+      read: false,
+      createdAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error sending notification:", error);
+  }
 };
 
 export const sendExchangeConfirmationNotification = async (

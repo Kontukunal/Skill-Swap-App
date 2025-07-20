@@ -9,6 +9,10 @@ import {
   FiVideo,
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
+import { db } from "../../config/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { generateMeetingLink } from "../../utils/meetingUtils";
+import { useNavigate } from "react-router-dom";
 
 const ExchangeRequestModal = ({ user, onClose, currentUser, onSubmit }) => {
   const [isOpen, setIsOpen] = useState(true);
@@ -17,6 +21,7 @@ const ExchangeRequestModal = ({ user, onClose, currentUser, onSubmit }) => {
   const [time, setTime] = useState("");
   const [duration, setDuration] = useState("30");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   const closeModal = () => {
     setIsOpen(false);
@@ -25,35 +30,32 @@ const ExchangeRequestModal = ({ user, onClose, currentUser, onSubmit }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!message || !date || !time) {
-      toast.error("Please fill all required fields");
+    if (!date || !time) {
+      toast.error("Please select date and time");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await onSubmit({
-        requesterId: currentUser.uid,
-        requesterName: currentUser.displayName || "Anonymous",
-        requesterPhoto: currentUser.photoURL || "",
-        recipientId: user.uid,
-        recipientName: user.displayName || "Anonymous",
-        recipientPhoto: user.photoURL || "",
+      // Generate meeting link
+      const meetingLink = generateMeetingLink();
+
+      // Prepare request data
+      const requestData = {
         message,
         date,
         time,
         duration: parseInt(duration),
-        skillToTeach:
-          currentUser.skillsToTeach?.find((skill) =>
-            user.skillsToLearn?.includes(skill)
-          ) || "",
-        skillToLearn:
-          user.skillsToTeach?.find((skill) =>
-            currentUser.skillsToLearn?.includes(skill)
-          ) || "",
-      });
+        meetingLink, // Include the generated meeting link
+      };
+
+      // Call parent's onSubmit handler with all data
+      await onSubmit(requestData);
+
+      closeModal();
     } catch (error) {
-      toast.error("Failed to send request");
+      console.error("Error scheduling call:", error);
+      toast.error(error.message || "Failed to schedule call");
     } finally {
       setIsSubmitting(false);
     }
@@ -88,7 +90,7 @@ const ExchangeRequestModal = ({ user, onClose, currentUser, onSubmit }) => {
               <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
                 <div className="flex justify-between items-center">
                   <Dialog.Title className="text-lg font-medium text-gray-900 dark:text-white">
-                    Request Skill Exchange
+                    Schedule Meeting
                   </Dialog.Title>
                   <button
                     onClick={closeModal}
@@ -109,31 +111,20 @@ const ExchangeRequestModal = ({ user, onClose, currentUser, onSubmit }) => {
                       <h4 className="text-sm font-medium text-gray-900 dark:text-white">
                         {user.displayName || "Anonymous"}
                       </h4>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {user.skillsToTeach?.slice(0, 3).map((skill) => (
-                          <span
-                            key={skill}
-                            className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
                     </div>
                   </div>
 
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Message
+                        Message (Optional)
                       </label>
                       <textarea
                         rows={3}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                        placeholder={`Hi ${user.displayName || "there"}, I'd like to exchange...`}
+                        placeholder={`Hi ${user.displayName || "there"}, I'd like to schedule a meeting...`}
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
-                        required
                       />
                     </div>
 
@@ -184,6 +175,7 @@ const ExchangeRequestModal = ({ user, onClose, currentUser, onSubmit }) => {
                         className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
                         value={duration}
                         onChange={(e) => setDuration(e.target.value)}
+                        required
                       >
                         <option value="30">30</option>
                         <option value="45">45</option>
@@ -213,7 +205,7 @@ const ExchangeRequestModal = ({ user, onClose, currentUser, onSubmit }) => {
                         disabled={isSubmitting}
                         className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                       >
-                        {isSubmitting ? "Sending..." : "Send Request"}
+                        {isSubmitting ? "Scheduling..." : "Schedule Meeting"}
                       </button>
                     </div>
                   </form>
