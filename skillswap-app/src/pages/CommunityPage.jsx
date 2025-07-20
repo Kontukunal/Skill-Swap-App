@@ -13,12 +13,16 @@ import { toast } from "react-hot-toast";
 import { motion } from "framer-motion";
 import CommunityPost from "../components/community/CommunityPost";
 import CommunityPostForm from "../components/community/CommunityPostForm";
+import SearchAndSort from "../components/community/SearchAndSort";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 
 const CommunityPage = () => {
   const { currentUser } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newPost, setNewPost] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortOption, setSortOption] = useState("newest");
 
   useEffect(() => {
     const q = query(
@@ -59,56 +63,90 @@ const CommunityPage = () => {
     }
   };
 
+  const filteredPosts = posts.filter(
+    (post) =>
+      post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (post.authorName &&
+        post.authorName.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const sortedPosts = [...filteredPosts].sort((a, b) => {
+    const dateA = a.createdAt?.toDate
+      ? a.createdAt.toDate()
+      : new Date(a.createdAt);
+    const dateB = b.createdAt?.toDate
+      ? b.createdAt.toDate()
+      : new Date(b.createdAt);
+
+    switch (sortOption) {
+      case "newest":
+        return dateB - dateA;
+      case "oldest":
+        return dateA - dateB;
+      case "mostLiked":
+        return (b.likes?.length || 0) - (a.likes?.length || 0);
+      case "mostCommented":
+        return (b.comments?.length || 0) - (a.comments?.length || 0);
+      default:
+        return 0;
+    }
+  });
+
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="sm:flex sm:items-center">
-          <div className="sm:flex-auto">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Community Forum
-            </h1>
-            <p className="mt-2 text-sm text-gray-700 dark:text-gray-400">
-              Ask questions, share experiences, and connect with other learners.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-8">
-          <CommunityPostForm
-            onSubmit={handleSubmit}
-            value={newPost}
-            onChange={setNewPost}
-            currentUser={currentUser}
-          />
-        </div>
-
-        {loading ? (
-          <div className="mt-8 flex justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-          </div>
-        ) : posts.length === 0 ? (
-          <div className="mt-8 text-center">
-            <p className="text-gray-500 dark:text-gray-400">
-              No posts yet. Be the first to share!
-            </p>
-          </div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="mt-8 space-y-6"
-          >
-            {posts.map((post) => (
-              <CommunityPost
-                key={post.id}
-                post={post}
-                currentUser={currentUser}
-              />
-            ))}
-          </motion.div>
-        )}
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          Community Forum
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          Ask questions and share experiences with other learners.
+        </p>
       </div>
+
+      {currentUser && (
+        <CommunityPostForm
+          onSubmit={handleSubmit}
+          value={newPost}
+          onChange={setNewPost}
+          currentUser={currentUser}
+        />
+      )}
+
+      <SearchAndSort
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        sortOption={sortOption}
+        setSortOption={setSortOption}
+      />
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <LoadingSpinner />
+        </div>
+      ) : sortedPosts.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500 dark:text-gray-400">
+            {searchQuery
+              ? "No posts match your search. Try different keywords."
+              : "No posts yet. Be the first to share!"}
+          </p>
+        </div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="space-y-6"
+        >
+          {sortedPosts.map((post) => (
+            <CommunityPost
+              key={post.id}
+              post={post}
+              currentUser={currentUser}
+            />
+          ))}
+        </motion.div>
+      )}
     </div>
   );
 };

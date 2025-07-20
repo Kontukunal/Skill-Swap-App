@@ -1,13 +1,5 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import {
-  FiHome,
-  FiUsers,
-  FiCalendar,
-  FiMessageSquare,
-  FiBook,
-  FiSettings,
-} from "react-icons/fi";
 import { RiExchangeBoxLine } from "react-icons/ri";
 import { BsPersonVideo } from "react-icons/bs";
 import { IoIosPeople } from "react-icons/io";
