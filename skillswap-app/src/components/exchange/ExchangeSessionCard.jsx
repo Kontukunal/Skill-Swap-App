@@ -1,12 +1,17 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { FiClock, FiCalendar, FiUser, FiMessageSquare } from "react-icons/fi";
-import { db } from "../../config/firebase";
-import { doc, updateDoc } from "firebase/firestore";
-import { toast } from "react-hot-toast";
+import {
+  FiClock,
+  FiCalendar,
+  FiUser,
+  FiMessageSquare,
+  FiVideo,
+} from "react-icons/fi";
 import VideoCallButton from "./VideoCallButton";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const ExchangeSessionCard = ({ session, currentUserId }) => {
+  const { theme } = useTheme();
   const isRequester = currentUserId === session.requesterId;
   const otherUser = isRequester ? session.recipient : session.requester;
   const sessionDate = new Date(`${session.date}T${session.time}`);
@@ -28,62 +33,99 @@ const ExchangeSessionCard = ({ session, currentUserId }) => {
   const formatTime = (timeString) => {
     const [hours, minutes] = timeString.split(":");
     const hour = parseInt(hours);
-    return `${hour > 12 ? hour - 12 : hour}:${minutes} ${hour >= 12 ? "PM" : "AM"}`;
+    return `${hour > 12 ? hour - 12 : hour}:${minutes.padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
   };
 
   return (
     <motion.div
-      whileHover={{ scale: 1.01 }}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700"
+      whileHover={{ y: -5 }}
+      className={`glass rounded-2xl overflow-hidden shadow-lg border ${theme.mode === "dark" ? "border-gray-700" : "border-gray-200"} backdrop-blur-sm`}
     >
       <div className="p-6">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-4">
-            <img
-              className="h-12 w-12 rounded-full object-cover"
-              src={otherUser.photoURL}
-              alt={otherUser.displayName}
-            />
+            <div className="relative">
+              <img
+                className="h-12 w-12 rounded-full object-cover border-2 border-white/20"
+                src={otherUser.photoURL}
+                alt={otherUser.displayName}
+              />
+              <div className="absolute -bottom-1 -right-1 bg-indigo-500 rounded-full p-1">
+                <FiUser className="h-3 w-3 text-white" />
+              </div>
+            </div>
             <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 {otherUser.displayName}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {isRequester ? "You requested to learn" : "Wants to learn"}:{" "}
-                {session.skillToLearn}
+                <span className="text-indigo-500 dark:text-indigo-400">
+                  {session.skillToLearn}
+                </span>
               </p>
             </div>
           </div>
           <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
               session.status === "accepted"
-                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200"
                 : session.status === "pending"
-                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                  : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200"
+                  : "bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-300"
             }`}
           >
-            {session.status}
+            {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
           </span>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-            <FiCalendar className="flex-shrink-0 mr-1.5 h-5 w-5" />
-            <p>{new Date(session.date).toLocaleDateString()}</p>
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div
+            className={`flex items-center p-3 rounded-xl ${theme.mode === "dark" ? "bg-gray-700/30" : "bg-white/50"}`}
+          >
+            <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg mr-3">
+              <FiCalendar className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Date</p>
+              <p className="font-medium text-gray-900 dark:text-white">
+                {new Date(session.date).toLocaleDateString()}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-            <FiClock className="flex-shrink-0 mr-1.5 h-5 w-5" />
-            <p>
-              {formatTime(session.time)} ({session.duration} mins)
-            </p>
+
+          <div
+            className={`flex items-center p-3 rounded-xl ${theme.mode === "dark" ? "bg-gray-700/30" : "bg-white/50"}`}
+          >
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg mr-3">
+              <FiClock className="h-5 w-5 text-purple-500 dark:text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Time</p>
+              <p className="font-medium text-gray-900 dark:text-white">
+                {formatTime(session.time)} ({session.duration} mins)
+              </p>
+            </div>
           </div>
         </div>
 
         {session.message && (
-          <div className="mt-4 flex items-start text-sm text-gray-500 dark:text-gray-400">
-            <FiMessageSquare className="flex-shrink-0 mr-1.5 h-5 w-5 mt-0.5" />
-            <p>{session.message}</p>
+          <div
+            className={`mt-4 p-3 rounded-xl ${theme.mode === "dark" ? "bg-gray-700/30" : "bg-white/50"}`}
+          >
+            <div className="flex items-start">
+              <div className="p-2 bg-pink-100 dark:bg-pink-900/50 rounded-lg mr-3">
+                <FiMessageSquare className="h-5 w-5 text-pink-500 dark:text-pink-400" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  Note
+                </p>
+                <p className="text-gray-700 dark:text-gray-300">
+                  {session.message}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -92,13 +134,17 @@ const ExchangeSessionCard = ({ session, currentUserId }) => {
             <>
               <button
                 onClick={() => handleStatusUpdate("accepted")}
-                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                className="px-4 py-2 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-xl font-medium hover:shadow-lg transition-all transform hover:-translate-y-0.5 text-sm"
               >
-                Accept
+                Accept Request
               </button>
               <button
                 onClick={() => handleStatusUpdate("rejected")}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  theme.mode === "dark"
+                    ? "bg-gray-700/50 text-gray-200 hover:bg-gray-700"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                } shadow-sm`}
               >
                 Decline
               </button>
@@ -112,7 +158,7 @@ const ExchangeSessionCard = ({ session, currentUserId }) => {
           {isPast && (
             <button
               onClick={() => {}}
-              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all transform hover:-translate-y-0.5 text-sm"
             >
               Leave Feedback
             </button>

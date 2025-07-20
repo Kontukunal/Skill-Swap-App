@@ -13,6 +13,8 @@
     "@headlessui/react": "^2.2.4",
     "@react-spring/three": "^10.0.1",
     "@reduxjs/toolkit": "^2.8.2",
+    "@rive-app/canvas": "^2.30.4",
+    "@rive-app/react-canvas": "^4.22.1",
     "@studio-freight/lenis": "^1.0.42",
     "antd": "^5.26.6",
     "date-fns": "^4.1.0",
@@ -27,7 +29,9 @@
     "react-markdown": "^10.1.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.6.3",
-    "rive-react": "^4.22.1"
+    "rive-react": "^4.22.1",
+    "styled-components": "^6.1.19",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",

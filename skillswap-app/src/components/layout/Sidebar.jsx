@@ -6,8 +6,10 @@ import { IoIosPeople } from "react-icons/io";
 import { TiHome } from "react-icons/ti";
 import { SiGoogledocs } from "react-icons/si";
 import { IoSettingsSharp } from "react-icons/io5";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
+  const { theme } = useTheme();
   const location = useLocation();
   const navItems = [
     { name: "Home", path: "/", icon: TiHome },
@@ -24,15 +26,30 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
       <div
         className={`${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-200 ease-in-out md:hidden`}
+        } fixed inset-y-0 left-0 z-40 w-64 transform transition-all duration-300 ease-in-out md:hidden`}
+        style={{
+          background:
+            theme.mode === "dark"
+              ? "rgba(31, 41, 55, 0.95)"
+              : "rgba(255, 255, 255, 0.95)",
+          backdropFilter: "blur(10px)",
+          borderRight:
+            theme.mode === "dark"
+              ? "1px solid rgba(55, 65, 81, 0.5)"
+              : "1px solid rgba(229, 231, 235, 0.5)",
+        }}
       >
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
-          <span className="text-xl font-bold text-gray-800 dark:text-white">
+        <div
+          className={`flex items-center justify-between h-16 px-4 ${theme.mode === "dark" ? "border-gray-700" : "border-gray-200"} border-b`}
+        >
+          <span
+            className={`text-xl font-bold ${theme.mode === "dark" ? "text-white" : "text-gray-800"}`}
+          >
             SkillSwap
           </span>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
+            className={`p-1 rounded-md ${theme.mode === "dark" ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-600"} focus:outline-none transition-colors duration-200`}
           >
             <svg
               className="h-6 w-6"
@@ -55,10 +72,14 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
               key={item.name}
               to={item.path}
               onClick={() => setSidebarOpen(false)}
-              className={`flex items-center px-4 py-3 text-sm font-medium ${
+              className={`flex items-center px-4 py-3 text-sm font-medium transition-colors duration-200 ${
                 location.pathname === item.path
-                  ? "bg-indigo-50 dark:bg-gray-700 text-indigo-600 dark:text-indigo-400"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  ? theme.mode === "dark"
+                    ? "bg-gray-700 text-indigo-400"
+                    : "bg-indigo-50 text-indigo-600"
+                  : theme.mode === "dark"
+                    ? "text-gray-300 hover:bg-gray-700"
+                    : "text-gray-700 hover:bg-gray-100"
               }`}
             >
               <item.icon className="mr-3 h-5 w-5" />
@@ -70,9 +91,26 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
 
       {/* Desktop sidebar */}
       <div className="hidden md:flex md:flex-shrink-0">
-        <div className="flex flex-col w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <div className="flex items-center h-16 px-4 border-b border-gray-200 dark:border-gray-700">
-            <span className="text-xl font-bold text-gray-800 dark:text-white">
+        <div
+          className="flex flex-col w-64 transition-colors duration-300"
+          style={{
+            background:
+              theme.mode === "dark"
+                ? "rgba(31, 41, 55, 0.95)"
+                : "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(10px)",
+            borderRight:
+              theme.mode === "dark"
+                ? "1px solid rgba(55, 65, 81, 0.5)"
+                : "1px solid rgba(229, 231, 235, 0.5)",
+          }}
+        >
+          <div
+            className={`flex items-center h-16 px-4 ${theme.mode === "dark" ? "border-gray-700" : "border-gray-200"} border-b`}
+          >
+            <span
+              className={`text-xl font-bold ${theme.mode === "dark" ? "text-white" : "text-gray-800"}`}
+            >
               SkillSwap
             </span>
           </div>
@@ -81,10 +119,14 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
               <Link
                 key={item.name}
                 to={item.path}
-                className={`flex items-center px-4 py-3 text-sm font-medium ${
+                className={`flex items-center px-4 py-3 text-sm font-medium transition-colors duration-200 ${
                   location.pathname === item.path
-                    ? "bg-indigo-50 dark:bg-gray-700 text-indigo-600 dark:text-indigo-400"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    ? theme.mode === "dark"
+                      ? "bg-gray-700 text-indigo-400"
+                      : "bg-indigo-50 text-indigo-600"
+                    : theme.mode === "dark"
+                      ? "text-gray-300 hover:bg-gray-700"
+                      : "text-gray-700 hover:bg-gray-100"
                 }`}
               >
                 <item.icon className="mr-3 h-5 w-5" />
