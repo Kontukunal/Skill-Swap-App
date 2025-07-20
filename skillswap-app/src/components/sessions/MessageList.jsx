@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { format } from "date-fns";
 import { FiVideo, FiLink, FiFile } from "react-icons/fi";
 
 const MessageList = ({ messages, currentUserId, session }) => {
-  const isSessionTimeValid = () => {
+  const isSessionTimeValid = useMemo(() => {
     if (!session?.date || !session?.time || !session?.duration) return false;
     try {
       const sessionDateTime = new Date(`${session.date}T${session.time}`);
@@ -16,7 +16,7 @@ const MessageList = ({ messages, currentUserId, session }) => {
     } catch {
       return false;
     }
-  };
+  }, [session]);
 
   const formatTimestamp = (timestamp) => {
     try {
@@ -35,8 +35,8 @@ const MessageList = ({ messages, currentUserId, session }) => {
       senderName = "Unknown",
       senderId = "",
       meetingLink = null,
-      resourceTitle = "",
-      resourceUrl = "",
+      resourceUrl = null,
+      resourceTitle = null,
     } = message;
 
     switch (type) {
@@ -44,15 +44,22 @@ const MessageList = ({ messages, currentUserId, session }) => {
         return (
           <div className="space-y-2">
             <p>{text}</p>
-            <a
-              href={meetingLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center px-3 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-            >
-              <FiVideo className="mr-2" />
-              Join Video Call
-            </a>
+            <div className="text-sm text-gray-600 dark:text-gray-300">
+              <p>Date: {message.date}</p>
+              <p>Time: {message.time}</p>
+              <p>Duration: {message.duration} minutes</p>
+            </div>
+            {isSessionTimeValid && (
+              <a
+                href={meetingLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-3 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              >
+                <FiVideo className="mr-2" />
+                Join Video Call
+              </a>
+            )}
             <p className="text-xs opacity-70 mt-1">
               {senderId === currentUserId ? "You" : senderName} •{" "}
               {formatTimestamp(message.timestamp)}
@@ -62,9 +69,9 @@ const MessageList = ({ messages, currentUserId, session }) => {
 
       case "resource":
         return (
-          <>
+          <div className="space-y-1">
             <div className="font-medium flex items-center">
-              <FiFile className="mr-1" /> {resourceTitle || "Untitled Resource"}
+              <FiFile className="mr-1" /> {resourceTitle}
             </div>
             {resourceUrl && (
               <a
@@ -76,18 +83,29 @@ const MessageList = ({ messages, currentUserId, session }) => {
                 <FiLink className="mr-1" /> View Resource
               </a>
             )}
-          </>
-        );
-
-      default:
-        return (
-          <>
-            <p>{text}</p>
             <p className="text-xs opacity-70 mt-1">
               {senderId === currentUserId ? "You" : senderName} •{" "}
               {formatTimestamp(message.timestamp)}
             </p>
-          </>
+          </div>
+        );
+
+      case "system":
+        return (
+          <div className="text-xs italic text-gray-400 dark:text-gray-500">
+            {text}
+          </div>
+        );
+
+      default:
+        return (
+          <div className="space-y-1">
+            <p>{text}</p>
+            <p className="text-xs opacity-70">
+              {senderId === currentUserId ? "You" : senderName} •{" "}
+              {formatTimestamp(message.timestamp)}
+            </p>
+          </div>
         );
     }
   };
@@ -104,14 +122,16 @@ const MessageList = ({ messages, currentUserId, session }) => {
         <div className="space-y-4">
           {messages.map((message) => (
             <div
-              key={message.id}
+              key={`${message.id}-${message.timestamp?.seconds || 0}`}
               className={`flex ${message.senderId === currentUserId ? "justify-end" : "justify-start"}`}
             >
               <div
                 className={`max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-4 py-2 ${
                   message.senderId === currentUserId
                     ? "bg-indigo-600 text-white"
-                    : "bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                    : message.type === "system"
+                      ? "bg-transparent text-gray-500 dark:text-gray-400"
+                      : "bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                 }`}
               >
                 {renderMessageContent(message)}

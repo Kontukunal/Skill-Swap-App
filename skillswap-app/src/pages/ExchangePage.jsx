@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import UserCard from "../components/exchange/UserCard";
 import ExchangeFilter from "../components/exchange/ExchangeFilter";
 import ExchangeRequestModal from "../components/exchange/ExchangeRequestModal";
@@ -25,6 +26,7 @@ import { generateMeetingLink } from "../utils/meetingUtils";
 
 const ExchangePage = () => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -66,6 +68,30 @@ const ExchangePage = () => {
 
     fetchUsers();
   }, [currentUser, filters]);
+
+  const findMatchingSkills = (currentUser, otherUser) => {
+    if (!currentUser?.skillsToTeach || !otherUser?.skillsToLearn) return null;
+
+    const potentialSkillsToTeach = currentUser.skillsToTeach.filter((skill) =>
+      otherUser.skillsToLearn.includes(skill)
+    );
+
+    const potentialSkillsToLearn = otherUser.skillsToTeach.filter((skill) =>
+      currentUser.skillsToLearn.includes(skill)
+    );
+
+    if (
+      potentialSkillsToTeach.length === 0 ||
+      potentialSkillsToLearn.length === 0
+    ) {
+      return null;
+    }
+
+    return {
+      skillToTeach: potentialSkillsToTeach[0],
+      skillToLearn: potentialSkillsToLearn[0],
+    };
+  };
 
   const findSkillMatches = () => {
     if (!currentUser?.skillsToTeach || !currentUser?.skillsToLearn) return [];
@@ -130,6 +156,10 @@ const ExchangePage = () => {
 
   const handleSendRequest = async (requestData) => {
     try {
+      if (!userProfile?.uid) {
+        throw new Error("Recipient user data is not available");
+      }
+
       const existingExchangeQuery = query(
         collection(db, "exchanges"),
         where("participants", "array-contains", currentUser.uid)
@@ -138,7 +168,7 @@ const ExchangePage = () => {
 
       let exchangeRef;
       let isNewExchange = true;
-      const meetingLink = generateMeetingLink();
+      const meetingLink = requestData.meetingLink; // Use the link from requestData
 
       // Find existing exchange
       querySnapshot.forEach((doc) => {
@@ -158,33 +188,43 @@ const ExchangePage = () => {
           recipientId: userProfile.uid,
           recipientName: userProfile.displayName,
           recipientPhoto: userProfile.photoURL,
-          skillToTeach: requestData.skillToTeach,
-          skillToLearn: requestData.skillToLearn,
           status: "pending",
           meetingLink,
+          date: requestData.date,
+          time: requestData.time,
+          duration: requestData.duration,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
       } else {
         await updateDoc(exchangeRef, {
           meetingLink,
+          date: requestData.date,
+          time: requestData.time,
+          duration: requestData.duration,
           updatedAt: serverTimestamp(),
         });
       }
 
-      // Add video call message
+      // Create detailed meeting message
+      const meetingMessage = `Meeting scheduled for ${requestData.date} at ${requestData.time} (${requestData.duration} minutes)`;
+
+      // Add video call message with all details
       await addDoc(collection(db, "exchanges", exchangeRef.id, "messages"), {
         type: "video",
-        text: `${currentUser.displayName} wants to exchange ${requestData.skillToTeach} for ${requestData.skillToLearn}`,
+        text: meetingMessage,
         meetingLink,
+        date: requestData.date,
+        time: requestData.time,
+        duration: requestData.duration,
         timestamp: serverTimestamp(),
         senderId: currentUser.uid,
         senderName: currentUser.displayName,
         senderPhoto: currentUser.photoURL,
       });
 
-      // Add user's message if provided
-      if (requestData.message) {
+      // Add user's custom message if provided
+      if (requestData?.message) {
         await addDoc(collection(db, "exchanges", exchangeRef.id, "messages"), {
           type: "text",
           text: requestData.message,
@@ -195,23 +235,23 @@ const ExchangePage = () => {
         });
       }
 
-      // Send notification
+      // Send notification with meeting details
       await sendExchangeRequestNotification(
         userProfile.uid,
         currentUser.displayName,
-        requestData.skillToTeach,
-        requestData.skillToLearn,
         exchangeRef.id,
-        meetingLink
+        meetingLink,
+        meetingMessage 
       );
 
       toast.success(
-        isNewExchange ? "Exchange request sent!" : "Added to existing exchange"
+        isNewExchange ? "Meeting request sent!" : "Added to existing exchange"
       );
       setIsModalOpen(false);
+      navigate(`/sessions/${exchangeRef.id}`);
     } catch (error) {
       console.error("Error sending request:", error);
-      toast.error("Failed to send request");
+      toast.error(error?.message || "Failed to send request");
     }
   };
 
@@ -308,6 +348,7 @@ const ExchangePage = () => {
           onClose={() => setIsModalOpen(false)}
           currentUser={currentUser}
           onSubmit={handleSendRequest}
+          // Remove skill selection props if they're no longer needed
         />
       )}
     </div>

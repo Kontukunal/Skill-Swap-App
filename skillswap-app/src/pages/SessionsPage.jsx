@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { db } from "../config/firebase";
 import {
@@ -33,6 +33,12 @@ const SessionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Memoized function to fetch user data
+  const fetchUserData = useCallback(async (userId) => {
+    const userDoc = await getDoc(doc(db, "users", userId));
+    return userDoc.exists() ? userDoc.data() : null;
+  }, []);
+
   // Fetch all unique sessions for the current user
   useEffect(() => {
     if (!currentUser) return;
@@ -45,41 +51,46 @@ const SessionsPage = () => {
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const sessionsMap = new Map();
+      const promises = [];
 
-      for (const docSnapshot of snapshot.docs) {
+      snapshot.docs.forEach((docSnapshot) => {
         const session = { id: docSnapshot.id, ...docSnapshot.data() };
         const otherUserId = session.participants.find(
           (id) => id !== currentUser.uid
         );
 
         if (otherUserId) {
-          if (sessionsMap.has(otherUserId)) {
+          if (!sessionsMap.has(otherUserId)) {
+            promises.push(
+              fetchUserData(otherUserId).then((userData) => {
+                if (userData) {
+                  session.otherUser = userData;
+                  sessionsMap.set(otherUserId, session);
+                }
+              })
+            );
+          } else {
             const existingSession = sessionsMap.get(otherUserId);
             sessionsMap.set(otherUserId, {
               ...existingSession,
               ...session,
               lastMessage: session.lastMessage || existingSession.lastMessage,
             });
-          } else {
-            const userDoc = await getDoc(doc(db, "users", otherUserId));
-            if (userDoc.exists()) {
-              session.otherUser = userDoc.data();
-            }
-            sessionsMap.set(otherUserId, session);
           }
         }
-      }
+      });
 
+      await Promise.all(promises);
       setSessions(Array.from(sessionsMap.values()));
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [currentUser]);
+  }, [currentUser, fetchUserData]);
 
   // Set active session
   useEffect(() => {
-    if (sessions.length > 0) {
+    if (sessions.length > 0 && !loading) {
       if (sessionId) {
         const foundSession = sessions.find((s) => s.id === sessionId);
         setActiveSession(foundSession || sessions[0]);
@@ -90,25 +101,7 @@ const SessionsPage = () => {
         }
       }
     }
-  }, [sessions, sessionId, navigate]);
-
-  const handleSendMessage = async (messageText) => {
-    if (!activeSession || !messageText.trim()) return;
-
-    try {
-      await addDoc(collection(db, "exchanges", activeSession.id, "messages"), {
-        text: messageText,
-        senderId: currentUser.uid,
-        senderName: currentUser.displayName,
-        senderPhoto: currentUser.photoURL,
-        timestamp: serverTimestamp(),
-        type: "text",
-      });
-    } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error("Failed to send message. Please check your permissions.");
-    }
-  };
+  }, [sessions, sessionId, navigate, loading]);
 
   // Fetch messages for active session
   useEffect(() => {
@@ -124,17 +117,19 @@ const SessionsPage = () => {
         id: doc.id,
         type: doc.data().type || "text",
         text: doc.data().text || "",
-        senderId: doc.data().senderId || "",
+        senderId: doc.data().senderId || "system",
         timestamp: doc.data().timestamp || serverTimestamp(),
-        senderName: doc.data().senderName || "Unknown",
+        senderName: doc.data().senderName || "System",
         senderPhoto: doc.data().senderPhoto || "",
         meetingLink: doc.data().meetingLink || null,
-        resourceTitle: doc.data().resourceTitle || "",
-        resourceUrl: doc.data().resourceUrl || "",
+        resourceUrl: doc.data().resourceUrl || null,
+        resourceTitle: doc.data().resourceTitle || null,
+        resourceType: doc.data().resourceType || null,
       }));
 
       setMessages(messagesData);
 
+      // Update last message in sessions
       if (messagesData.length > 0) {
         const lastMsg = messagesData[messagesData.length - 1];
         setSessions((prev) =>
@@ -156,6 +151,30 @@ const SessionsPage = () => {
     return () => unsubscribe();
   }, [activeSession]);
 
+  const handleSendMessage = async (messageText) => {
+    if (!activeSession || !messageText.trim()) return;
+
+    try {
+      // Add message to Firestore
+      await addDoc(collection(db, "exchanges", activeSession.id, "messages"), {
+        text: messageText,
+        senderId: currentUser.uid,
+        senderName: currentUser.displayName,
+        senderPhoto: currentUser.photoURL,
+        timestamp: serverTimestamp(),
+        type: "text",
+      });
+
+      // Update last message timestamp in the exchange document
+      await updateDoc(doc(db, "exchanges", activeSession.id), {
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message. Please check your permissions.");
+    }
+  };
+
   const handleSendResource = async (resource) => {
     if (!activeSession) return;
     try {
@@ -168,6 +187,11 @@ const SessionsPage = () => {
         senderName: currentUser.displayName,
         senderPhoto: currentUser.photoURL,
         timestamp: serverTimestamp(),
+      });
+
+      // Update last message timestamp in the exchange document
+      await updateDoc(doc(db, "exchanges", activeSession.id), {
+        updatedAt: serverTimestamp(),
       });
     } catch (error) {
       console.error("Error sharing resource:", error);
@@ -183,21 +207,36 @@ const SessionsPage = () => {
       return;
 
     try {
-      const messagesQuery = query(
-        collection(db, "exchanges", activeSession.id, "messages")
+      // Get all messages
+      const messagesRef = collection(
+        db,
+        "exchanges",
+        activeSession.id,
+        "messages"
       );
+      const messagesQuery = query(messagesRef);
       const snapshot = await getDocs(messagesQuery);
 
+      // Delete in batch
       const batch = writeBatch(db);
       snapshot.forEach((doc) => {
         batch.delete(doc.ref);
       });
 
       await batch.commit();
+
+      // Add system message
+      await addDoc(messagesRef, {
+        type: "system",
+        text: `${currentUser.displayName} cleared the chat`,
+        timestamp: serverTimestamp(),
+        senderId: currentUser.uid,
+      });
+
       toast.success("Chat cleared successfully");
     } catch (error) {
       console.error("Error clearing chat:", error);
-      toast.error("Failed to clear chat");
+      toast.error("Failed to clear chat. Please check permissions.");
     }
   };
 
