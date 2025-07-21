@@ -60,7 +60,6 @@ const ExchangeSessionsPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Floating background elements */}
       <div className="fixed inset-0 pointer-events-none -z-10">
         {theme.mode === "dark" ? (
           <>

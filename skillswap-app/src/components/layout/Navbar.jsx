@@ -3,15 +3,9 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { Menu, Transition } from "@headlessui/react";
-import {
-  FiMenu,
-  FiUser,
-  FiLogOut,
-  FiSun,
-  FiMoon,
-  FiBell,
-} from "react-icons/fi";
+import { FiMenu, FiUser, FiLogOut, FiSun, FiMoon } from "react-icons/fi";
 import Logo from "../../assets/logo.svg";
+import NotificationBell from "../notifications/NotificationBell"; 
 
 const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
   const { currentUser, logout } = useAuth();
@@ -37,7 +31,6 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
         <div className="flex justify-between h-16 items-center">
           {/* Left section */}
           <div className="flex items-center">
-            {/* Menu button - only shown on mobile when sidebar is hidden */}
             {showMenuButton && (
               <button
                 type="button"
@@ -49,7 +42,6 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
               </button>
             )}
 
-            {/* Logo - always visible */}
             <Link
               to="/"
               className="flex items-center hover:opacity-80 transition-opacity duration-200"
@@ -63,9 +55,7 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
             </Link>
           </div>
 
-          {/* Right section */}
           <div className="flex items-center space-x-4">
-            {/* Dark mode toggle */}
             <button
               onClick={toggleTheme}
               className={`p-2 rounded-full ${theme.mode === "dark" ? "text-gray-400 hover:text-gray-300 hover:bg-gray-700" : "text-gray-500 hover:text-gray-600 hover:bg-gray-100"} transition-colors duration-200`}
@@ -82,17 +72,8 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
               )}
             </button>
 
-            {/* Notification bell */}
-            {currentUser && (
-              <button
-                className={`p-2 rounded-full relative ${theme.mode === "dark" ? "text-gray-400 hover:text-gray-300 hover:bg-gray-700" : "text-gray-500 hover:text-gray-600 hover:bg-gray-100"} transition-colors duration-200`}
-              >
-                <FiBell className="h-5 w-5" />
-                <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
-            )}
+            {currentUser && <NotificationBell theme={theme} />}
 
-            {/* User menu or auth buttons */}
             {currentUser ? (
               <Menu as="div" className="relative">
                 <Menu.Button className="flex items-center space-x-2 focus:outline-none">

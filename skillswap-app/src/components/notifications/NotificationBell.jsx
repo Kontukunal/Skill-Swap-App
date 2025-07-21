@@ -16,7 +16,6 @@ const NotificationBell = () => {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -32,12 +31,10 @@ const NotificationBell = () => {
 
   const handleNotificationClick = async (notification) => {
     try {
-      // Mark as read if not already read
       if (!notification.read) {
         await markAsRead(notification.id);
       }
 
-      // Navigate based on notification type
       if (notification.type === "exchange") {
         navigate(`/exchanges/${notification.relatedId}`);
       } else if (notification.type === "session") {
@@ -53,7 +50,7 @@ const NotificationBell = () => {
   };
 
   const handleMarkAsRead = async (notificationId, e) => {
-    e.stopPropagation(); // Prevent triggering the parent click handler
+    e.stopPropagation();
     try {
       await markAsRead(notificationId);
     } catch (error) {
@@ -110,9 +107,15 @@ const NotificationBell = () => {
                         </p>
                         {notification.meetingLink && (
                           <div className="mt-2">
-                            <span className="inline-flex items-center text-sm text-indigo-600 dark:text-indigo-400">
-                              <FiVideo className="mr-1" /> Meeting Available
-                            </span>
+                            <a
+                              href={notification.meetingLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <FiVideo className="mr-1" /> Join Meeting
+                            </a>
                           </div>
                         )}
                       </div>

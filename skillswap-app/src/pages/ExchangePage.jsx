@@ -9,6 +9,8 @@ import {
   getDocs,
   doc,
   getDoc,
+  addDoc,
+  writeBatch,
 } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -150,11 +152,50 @@ const ExchangePage = () => {
         duration: requestData.duration,
         message: requestData.message,
         createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
-      navigate("/sessions", { state: { newExchange: exchangeData } });
-      toast.success("Meeting request created!");
+      const exchangesRef = collection(db, "exchanges");
+      const exchangeRef = await addDoc(exchangesRef, exchangeData);
+
+      const notificationsRef = collection(db, "notifications");
+      const batch = writeBatch(db);
+
+      const recipientNotificationRef = doc(notificationsRef);
+      batch.set(recipientNotificationRef, {
+        userId: userProfile.uid,
+        title: "New Exchange Request",
+        message: `${currentUser.displayName} wants to exchange skills with you`,
+        type: "exchange_request",
+        meetingLink,
+        relatedId: exchangeRef.id,
+        read: false,
+        createdAt: new Date(),
+        senderId: currentUser.uid,
+        senderName: currentUser.displayName,
+        senderPhoto: currentUser.photoURL,
+      });
+
+      const requesterNotificationRef = doc(notificationsRef);
+      batch.set(requesterNotificationRef, {
+        userId: currentUser.uid,
+        title: "Exchange Request Sent",
+        message: `You requested to exchange skills with ${userProfile.displayName}`,
+        type: "exchange_request",
+        meetingLink,
+        relatedId: exchangeRef.id,
+        read: false,
+        createdAt: new Date(),
+        recipientId: userProfile.uid,
+        recipientName: userProfile.displayName,
+        recipientPhoto: userProfile.photoURL,
+      });
+
+      await batch.commit();
+
+      toast.success("Exchange request sent successfully!");
       setIsModalOpen(false);
+      navigate("/sessions", { state: { newExchangeId: exchangeRef.id } });
     } catch (error) {
       console.error("Error sending request:", error);
       toast.error(error?.message || "Failed to send request");
@@ -165,7 +206,6 @@ const ExchangePage = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Futuristic floating background elements */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
         {theme.mode === "dark" ? (
           <>
@@ -182,7 +222,6 @@ const ExchangePage = () => {
         )}
       </div>
 
-      {/* Main content with glass morphism */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -250,7 +289,6 @@ const ExchangePage = () => {
           </AnimatePresence>
         </motion.div>
 
-        {/* User cards grid */}
         {loading ? (
           <div className="flex justify-center py-20">
             <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-500"></div>

@@ -13,7 +13,6 @@ export const useSkillMatching = (currentUser, allUsers) => {
       setLoading(true);
       const potentialMatches = findSkillMatches(currentUser, allUsers);
 
-      // Sort by match score
       const sortedMatches = potentialMatches
         .map((user) => ({
           user,

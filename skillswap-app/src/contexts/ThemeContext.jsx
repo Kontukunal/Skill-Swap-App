@@ -1,42 +1,3 @@
-// // contexts/ThemeContext.jsx
-// import React, { createContext, useContext, useEffect, useState } from "react";
-
-// const ThemeContext = createContext();
-
-// export const ThemeProvider = ({ children }) => {
-//   const [darkMode, setDarkMode] = useState(false);
-
-//   useEffect(() => {
-//     // Check for saved theme preference or use system preference
-//     const savedTheme = localStorage.getItem("theme");
-//     const isDark = savedTheme
-//       ? savedTheme === "dark"
-//       : window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-//     setDarkMode(isDark);
-//   }, []);
-
-//   useEffect(() => {
-//     // Apply theme changes
-//     document.documentElement.setAttribute(
-//       "data-theme",
-//       darkMode ? "dark" : "light"
-//     );
-//     localStorage.setItem("theme", darkMode ? "dark" : "light");
-//   }, [darkMode]);
-
-//   const toggleTheme = () => setDarkMode(!darkMode);
-
-//   return (
-//     <ThemeContext.Provider value={{ darkMode, toggleTheme }}>
-//       {children}
-//     </ThemeContext.Provider>
-//   );
-// };
-
-// export const useTheme = () => useContext(ThemeContext);
-
-// src/contexts/ThemeContext.jsx
 import React, { createContext, useState, useEffect } from "react";
 
 export const lightTheme = {
@@ -66,12 +27,12 @@ export const darkTheme = {
 };
 
 export const ThemeContext = createContext({
-  theme: lightTheme,
+  theme: darkTheme,
   toggleTheme: () => {},
 });
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState(lightTheme);
+  const [theme, setTheme] = useState(darkTheme);
 
   const toggleTheme = () => {
     setTheme((prevTheme) =>
@@ -81,9 +42,13 @@ export const ThemeProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") || "light";
-    setTheme(savedTheme === "dark" ? darkTheme : lightTheme);
-    document.documentElement.classList.toggle("dark", savedTheme === "dark");
+    const savedTheme = localStorage.getItem("theme");
+    const initialTheme = savedTheme === "light" ? lightTheme : darkTheme;
+    setTheme(initialTheme);
+    document.documentElement.classList.toggle(
+      "dark",
+      initialTheme.mode === "dark"
+    );
   }, []);
 
   return (

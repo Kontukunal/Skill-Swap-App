@@ -34,7 +34,6 @@ const RegisterPage = () => {
       className={`min-h-screen flex items-center justify-center ${theme.mode === "dark" ? "bg-gradient-to-br from-gray-900 to-gray-800" : "bg-gradient-to-br from-indigo-50 to-gray-50"} py-12 px-4 sm:px-6 lg:px-8`}
     >
       <div className="max-w-7xl mx-auto lg:grid lg:grid-cols-2 lg:gap-16">
-        {/* Illustration Section */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -61,7 +60,6 @@ const RegisterPage = () => {
           />
         </motion.div>
 
-        {/* Form Section */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}

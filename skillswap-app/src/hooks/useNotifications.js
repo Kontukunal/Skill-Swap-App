@@ -31,7 +31,6 @@ export const useNotifications = (userId) => {
         });
       });
 
-      // Sort by createdAt (newest first)
       notificationsData.sort(
         (a, b) => b.createdAt?.toDate() - a.createdAt?.toDate()
       );
