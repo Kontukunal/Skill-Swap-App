@@ -9,7 +9,20 @@ Fullstack (React.js Frontend with Firebase Database)
 ## Deployed App
 [Frontend Live Demo](#) : https://skillswapbykunal.netlify.app
 
-## Key Features
+## UI 
+<img width="1900" height="840" alt="image" src="https://github.com/user-attachments/assets/70ee488c-138a-4c0d-81f4-c65b8be17cb0" />
+<img width="1491" height="704" alt="image" src="https://github.com/user-attachments/assets/9908bc89-3c71-4957-9cf4-e6f425890669" />
+<img width="1795" height="842" alt="image" src="https://github.com/user-attachments/assets/656ac3eb-4691-4963-ab38-60e2cc4c07b3" />
+<img width="1750" height="862" alt="image" src="https://github.com/user-attachments/assets/b6a5d996-2b86-4c1d-9cea-d1cd16c460b2" />
+<img width="1906" height="860" alt="image" src="https://github.com/user-attachments/assets/0d9abf56-87de-4151-9a60-32f8571b83ca" />
+<img width="1898" height="862" alt="image" src="https://github.com/user-attachments/assets/c1f5f518-d576-4ad5-aeb6-c93575b19712" />
+<img width="1896" height="848" alt="image" src="https://github.com/user-attachments/assets/5cfb0b24-017a-40ef-a07f-48737796b843" />
+<img width="1891" height="786" alt="image" src="https://github.com/user-attachments/assets/91ded2c8-a6ad-46ee-abf0-ea4b046a45b7" />
+<img width="1893" height="784" alt="image" src="https://github.com/user-attachments/assets/3ac77069-f9d9-41ee-985d-764dab8dca36" />
+<img width="1916" height="860" alt="image" src="https://github.com/user-attachments/assets/85c08a45-b587-4483-b043-ba7c75d6657d" />
+
+
+
 
 ### Core Features
 - 🔐 **User Authentication** - Secure login/registration with Firebase Auth
