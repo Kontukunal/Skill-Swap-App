@@ -1,12 +1,45 @@
-# React + Vite
+# SkillSwap - Peer-to-Peer Skill Exchange Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Introduction
+SkillSwap is a innovative platform that connects individuals looking to learn and share skills through mutual exchanges. In today's gig economy, continuous learning is essential but often expensive. Our app solves this by creating a community where users can trade skills without monetary transactions, fostering lifelong learning and professional development.
 
-Currently, two official plugins are available:
+## Project Type
+Fullstack (React.js Frontend with Firebase Database)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Deployed App
+[Frontend Live Demo](#) https://skillswapbykunal.netlify.app
 
-## Expanding the ESLint configuration
+## Key Features
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Core Features
+- 🔐 **User Authentication** - Secure login/registration with Firebase Auth
+- 📝 **Profile Creation** - Detailed profiles showcasing skills, interests, and learning goals
+- 🗓️ **Exchange Sessions** - Schedule one-on-one skill-exchange sessions
+- 💬 **Community Forum** - Discussion space for questions and shared experiences
+- 📚 **Resource Sharing** - Upload and share learning materials
+
+### Unique Features
+- 🎯 **Smart Skill Matching** - Algorithm connects users with complementary skills
+- 🔔 **Real-Time Notifications** - Instant alerts for new matches and messages
+
+### Additional Features
+- ✉️ In-App Messaging
+- 🌙 Dark Mode Support
+- 📱 Fully Responsive Design
+
+## Technology Stack
+**Frontend:**
+- React.js (with Hooks)
+- React Router for navigation
+- Context API for state management
+
+**Database:**
+- Firebase Authentication
+- Firebase Firestore 
+
+## Installation & Getting Started
+
+1. Clone the repository:
+```bash
+git clone https://github.com/Kontukunal/Skill-Swap-App
+cd Skill-Swap-App
