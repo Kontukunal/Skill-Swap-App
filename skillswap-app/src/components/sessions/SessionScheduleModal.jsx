@@ -1,8 +1,11 @@
 import React, { useState } from "react";
 import { FiCalendar, FiClock, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
+import { motion } from "framer-motion";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const SessionScheduleModal = ({ session, onClose, onSubmit }) => {
+  const { theme } = useTheme();
   const [date, setDate] = useState(session?.date || "");
   const [time, setTime] = useState(session?.time || "");
   const [duration, setDuration] = useState(session?.duration || "30");
@@ -23,17 +26,17 @@ const SessionScheduleModal = ({ session, onClose, onSubmit }) => {
       return;
     }
 
-    onSubmit({
-      date,
-      time,
-      duration,
-    });
+    onSubmit({ date, time, duration });
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
-        <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className={`w-full max-w-md rounded-2xl shadow-xl ${theme.mode === "dark" ? "bg-gray-800" : "bg-white"}`}
+      >
+        <div className="flex justify-between items-center border-b p-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Schedule Session
           </h3>
@@ -59,7 +62,7 @@ const SessionScheduleModal = ({ session, onClose, onSubmit }) => {
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 min={new Date().toISOString().split("T")[0]}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                className={`block w-full pl-10 pr-3 py-2 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${theme.mode === "dark" ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`}
                 required
               />
             </div>
@@ -77,7 +80,7 @@ const SessionScheduleModal = ({ session, onClose, onSubmit }) => {
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                className={`block w-full pl-10 pr-3 py-2 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${theme.mode === "dark" ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`}
                 required
               />
             </div>
@@ -90,7 +93,7 @@ const SessionScheduleModal = ({ session, onClose, onSubmit }) => {
             <select
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
-              className="block w-full pl-3 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+              className={`block w-full pl-3 pr-10 py-2 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${theme.mode === "dark" ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`}
             >
               <option value="30">30 minutes</option>
               <option value="45">45 minutes</option>
@@ -101,22 +104,26 @@ const SessionScheduleModal = ({ session, onClose, onSubmit }) => {
           </div>
 
           <div className="flex justify-end space-x-3 pt-4">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              className={`px-4 py-2 rounded-lg shadow-sm text-sm font-medium ${theme.mode === "dark" ? "bg-gray-700 text-gray-300 hover:bg-gray-600" : "bg-white text-gray-700 hover:bg-gray-50"} border ${theme.mode === "dark" ? "border-gray-600" : "border-gray-300"}`}
             >
               Cancel
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               type="submit"
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg shadow-sm text-sm font-medium hover:shadow-md"
             >
               Schedule
-            </button>
+            </motion.button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 };

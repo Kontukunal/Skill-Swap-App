@@ -7,7 +7,6 @@
     @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100;
   }
 
-  /* Smooth transitions for dark mode */
   body,
   button,
   input,
@@ -17,7 +16,6 @@
   }
 }
 
-/* Custom scrollbar */
 @layer utilities {
   .scrollbar {
     scrollbar-width: thin;
@@ -68,7 +66,6 @@
   animation-delay: 4s;
 }
 
-/* Smooth transitions for dark mode */
 html {
   scroll-behavior: smooth;
 }
@@ -79,7 +76,6 @@ body {
     color 0.3s ease;
 }
 
-/* Glassmorphism effect */
 .glass {
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(10px);
@@ -120,4 +116,22 @@ body {
 
 .dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-white/20 dark:border-gray-700/50 shadow-lg;
+  }
+  
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500;
+  }
+  
+  .neon-shadow {
+    @apply shadow-[0_0_15px_rgba(99,102,241,0.3)] dark:shadow-[0_0_15px_rgba(99,102,241,0.5)];
+  }
+  
+  .hover-scale {
+    @apply transition-transform duration-300 hover:scale-[1.02];
+  }
 }

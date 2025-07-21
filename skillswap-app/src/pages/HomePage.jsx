@@ -103,7 +103,6 @@ const HomePage = () => {
 
   return (
     <div className="relative overflow-hidden">
-      {/* Floating background elements */}
       <motion.div
         className="absolute top-0 left-0 w-full h-full pointer-events-none"
         style={{ y }}
@@ -121,7 +120,6 @@ const HomePage = () => {
         )}
       </motion.div>
 
-      {/* Hero Section */}
       <section
         className={`relative pt-32 pb-40 overflow-hidden ${theme.mode === "dark" ? "bg-gradient-to-br from-gray-900 to-gray-800" : "bg-gradient-to-br from-indigo-50 via-purple-50 to-gray-50"}`}
       >
@@ -215,7 +213,6 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Features Section */}
       <section
         className={`py-24 ${theme.mode === "dark" ? "bg-gray-900" : "bg-white"}`}
       >
@@ -288,7 +285,6 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Stats Section */}
       <section
         className={`py-16 ${theme.mode === "dark" ? "bg-gray-800" : "bg-gray-50"}`}
       >
@@ -354,7 +350,6 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
       <section
         className={`py-24 ${theme.mode === "dark" ? "bg-gray-900" : "bg-white"}`}
       >
@@ -437,7 +432,6 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section
         className={`py-24 ${theme.mode === "dark" ? "bg-gradient-to-r from-indigo-900 to-purple-900" : "bg-gradient-to-r from-indigo-600 to-purple-600"}`}
       >

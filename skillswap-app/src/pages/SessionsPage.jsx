@@ -22,9 +22,12 @@ import MessageInput from "../components/sessions/MessageInput";
 import SessionSidebar from "../components/sessions/SessionSidebar";
 import { toast } from "react-hot-toast";
 import { generateMeetingLink } from "../utils/meetingUtils";
+import { useTheme } from "../contexts/ThemeContext";
+import { motion } from "framer-motion";
 
 const SessionsPage = () => {
   const { currentUser } = useAuth();
+  const { theme } = useTheme();
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const [sessions, setSessions] = useState([]);
@@ -33,13 +36,11 @@ const SessionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Memoized function to fetch user data
   const fetchUserData = useCallback(async (userId) => {
     const userDoc = await getDoc(doc(db, "users", userId));
     return userDoc.exists() ? userDoc.data() : null;
   }, []);
 
-  // Fetch all unique sessions for the current user
   useEffect(() => {
     if (!currentUser) return;
 
@@ -59,24 +60,15 @@ const SessionsPage = () => {
           (id) => id !== currentUser.uid
         );
 
-        if (otherUserId) {
-          if (!sessionsMap.has(otherUserId)) {
-            promises.push(
-              fetchUserData(otherUserId).then((userData) => {
-                if (userData) {
-                  session.otherUser = userData;
-                  sessionsMap.set(otherUserId, session);
-                }
-              })
-            );
-          } else {
-            const existingSession = sessionsMap.get(otherUserId);
-            sessionsMap.set(otherUserId, {
-              ...existingSession,
-              ...session,
-              lastMessage: session.lastMessage || existingSession.lastMessage,
-            });
-          }
+        if (!sessionsMap.has(docSnapshot.id)) {
+          promises.push(
+            fetchUserData(otherUserId).then((userData) => {
+              if (userData) {
+                session.otherUser = userData;
+                sessionsMap.set(docSnapshot.id, session);
+              }
+            })
+          );
         }
       });
 
@@ -88,7 +80,6 @@ const SessionsPage = () => {
     return () => unsubscribe();
   }, [currentUser, fetchUserData]);
 
-  // Set active session
   useEffect(() => {
     if (sessions.length > 0 && !loading) {
       if (sessionId) {
@@ -103,7 +94,6 @@ const SessionsPage = () => {
     }
   }, [sessions, sessionId, navigate, loading]);
 
-  // Fetch messages for active session
   useEffect(() => {
     if (!activeSession) return;
 
@@ -115,21 +105,11 @@ const SessionsPage = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const messagesData = snapshot.docs.map((doc) => ({
         id: doc.id,
-        type: doc.data().type || "text",
-        text: doc.data().text || "",
-        senderId: doc.data().senderId || "system",
+        ...doc.data(),
         timestamp: doc.data().timestamp || serverTimestamp(),
-        senderName: doc.data().senderName || "System",
-        senderPhoto: doc.data().senderPhoto || "",
-        meetingLink: doc.data().meetingLink || null,
-        resourceUrl: doc.data().resourceUrl || null,
-        resourceTitle: doc.data().resourceTitle || null,
-        resourceType: doc.data().resourceType || null,
       }));
-
       setMessages(messagesData);
 
-      // Update last message in sessions
       if (messagesData.length > 0) {
         const lastMsg = messagesData[messagesData.length - 1];
         setSessions((prev) =>
@@ -155,7 +135,6 @@ const SessionsPage = () => {
     if (!activeSession || !messageText.trim()) return;
 
     try {
-      // Add message to Firestore
       await addDoc(collection(db, "exchanges", activeSession.id, "messages"), {
         text: messageText,
         senderId: currentUser.uid,
@@ -165,13 +144,11 @@ const SessionsPage = () => {
         type: "text",
       });
 
-      // Update last message timestamp in the exchange document
       await updateDoc(doc(db, "exchanges", activeSession.id), {
         updatedAt: serverTimestamp(),
       });
     } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error("Failed to send message. Please check your permissions.");
+      toast.error("Failed to send message");
     }
   };
 
@@ -189,43 +166,31 @@ const SessionsPage = () => {
         timestamp: serverTimestamp(),
       });
 
-      // Update last message timestamp in the exchange document
       await updateDoc(doc(db, "exchanges", activeSession.id), {
         updatedAt: serverTimestamp(),
       });
     } catch (error) {
-      console.error("Error sharing resource:", error);
-      toast.error("Failed to share resource. Please check your permissions.");
+      toast.error("Failed to share resource");
     }
   };
 
   const handleClearChat = async () => {
-    if (
-      !activeSession ||
-      !window.confirm("Are you sure you want to clear this chat?")
-    )
-      return;
+    if (!window.confirm("Are you sure you want to clear this chat?")) return;
 
     try {
-      // Get all messages
       const messagesRef = collection(
         db,
         "exchanges",
         activeSession.id,
         "messages"
       );
-      const messagesQuery = query(messagesRef);
-      const snapshot = await getDocs(messagesQuery);
-
-      // Delete in batch
+      const snapshot = await getDocs(messagesRef);
       const batch = writeBatch(db);
       snapshot.forEach((doc) => {
         batch.delete(doc.ref);
       });
-
       await batch.commit();
 
-      // Add system message
       await addDoc(messagesRef, {
         type: "system",
         text: `${currentUser.displayName} cleared the chat`,
@@ -235,8 +200,7 @@ const SessionsPage = () => {
 
       toast.success("Chat cleared successfully");
     } catch (error) {
-      console.error("Error clearing chat:", error);
-      toast.error("Failed to clear chat. Please check permissions.");
+      toast.error("Failed to clear chat");
     }
   };
 
@@ -268,7 +232,6 @@ const SessionsPage = () => {
       toast.success("Session scheduled successfully!");
     } catch (error) {
       toast.error("Failed to schedule session");
-      console.error("Error scheduling session:", error);
     }
   };
 
@@ -292,11 +255,11 @@ const SessionsPage = () => {
   if (sessions.length === 0) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">
+        <div className="text-center glass p-8 rounded-2xl">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
             No exchange sessions found
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">
+          <p className="text-gray-600 dark:text-gray-300 mt-2">
             Start by requesting a skill exchange from the Explore page
           </p>
         </div>
@@ -305,7 +268,24 @@ const SessionsPage = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+    <div
+      className={`flex h-screen ${theme.mode === "dark" ? "bg-gray-900" : "bg-gray-50"}`}
+    >
+      {/* Floating background elements */}
+      <div className="fixed inset-0 pointer-events-none -z-10">
+        {theme.mode === "dark" ? (
+          <>
+            <div className="absolute top-1/4 -left-20 w-64 h-64 rounded-full bg-indigo-900/10 blur-3xl animate-blob"></div>
+            <div className="absolute bottom-1/4 -right-20 w-64 h-64 rounded-full bg-purple-900/10 blur-3xl animate-blob animation-delay-2000"></div>
+          </>
+        ) : (
+          <>
+            <div className="absolute top-1/4 -left-20 w-64 h-64 rounded-full bg-indigo-100/40 blur-3xl animate-blob"></div>
+            <div className="absolute bottom-1/4 -right-20 w-64 h-64 rounded-full bg-purple-100/40 blur-3xl animate-blob animation-delay-2000"></div>
+          </>
+        )}
+      </div>
+
       <SessionSidebar
         sessions={filteredSessions}
         activeSession={activeSession}
@@ -318,7 +298,11 @@ const SessionsPage = () => {
       />
 
       {activeSession ? (
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex-1 flex flex-col overflow-hidden"
+        >
           <ChatHeader
             session={activeSession}
             currentUser={currentUser}
@@ -336,9 +320,9 @@ const SessionsPage = () => {
             onSendMessage={handleSendMessage}
             onSendResource={handleSendResource}
           />
-        </div>
+        </motion.div>
       ) : (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center glass rounded-xl m-4">
           <p className="text-gray-500 dark:text-gray-400">
             Select a session to start chatting
           </p>
