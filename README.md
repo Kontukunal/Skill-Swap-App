@@ -7,7 +7,7 @@ SkillSwap is a innovative platform that connects individuals looking to learn an
 Fullstack (React.js Frontend with Firebase Database)
 
 ## Deployed App
-[Frontend Live Demo](#) : https://skillswapbykunal.netlify.app  
+[Frontend Live Demo](#) : https://skillswap-by-kunalmali.netlify.app  
 [Video Demo](#) : https://youtu.be/DZ5XQEXkPyo
 
 ## UI 
