@@ -1,15 +1,20 @@
 # SkillSwap - Peer-to-Peer Skill Exchange Platform
 
 ## Introduction
+
 SkillSwap is a innovative platform that connects individuals looking to learn and share skills through mutual exchanges. In today's gig economy, continuous learning is essential but often expensive. Our app solves this by creating a community where users can trade skills without monetary transactions, fostering lifelong learning and professional development.
 
 ## Project Type
+
 Fullstack (React.js Frontend with Firebase Database)
 
 ## Deployed App
-[Frontend Live Demo](#) : https://skillswapbykunal.netlify.app
 
-## UI 
+[Frontend Live Demo](#) : https://skillswap-by-kunalmali.netlify.app  
+[Video Demo](#) : https://youtu.be/DZ5XQEXkPyo
+
+## UI
+
 <img width="1900" height="840" alt="image" src="https://github.com/user-attachments/assets/70ee488c-138a-4c0d-81f4-c65b8be17cb0" />
 <img width="1491" height="704" alt="image" src="https://github.com/user-attachments/assets/9908bc89-3c71-4957-9cf4-e6f425890669" />
 <img width="1795" height="842" alt="image" src="https://github.com/user-attachments/assets/656ac3eb-4691-4963-ab38-60e2cc4c07b3" />
@@ -21,10 +26,8 @@ Fullstack (React.js Frontend with Firebase Database)
 <img width="1893" height="784" alt="image" src="https://github.com/user-attachments/assets/3ac77069-f9d9-41ee-985d-764dab8dca36" />
 <img width="1916" height="860" alt="image" src="https://github.com/user-attachments/assets/85c08a45-b587-4483-b043-ba7c75d6657d" />
 
-
-
-
 ### Core Features
+
 - 🔐 **User Authentication** - Secure login/registration with Firebase Auth
 - 📝 **Profile Creation** - Detailed profiles showcasing skills, interests, and learning goals
 - 🗓️ **Exchange Sessions** - Schedule one-on-one skill-exchange sessions
@@ -32,27 +35,34 @@ Fullstack (React.js Frontend with Firebase Database)
 - 📚 **Resource Sharing** - Upload and share learning materials
 
 ### Unique Features
+
 - 🎯 **Smart Skill Matching** - Algorithm connects users with complementary skills
 - 🔔 **Real-Time Notifications** - Instant alerts for new matches and messages
 
 ### Additional Features
+
 - ✉️ In-App Messaging
 - 🌙 Dark Mode Support
 - 📱 Fully Responsive Design
 
 ## Technology Stack
+
 **Frontend:**
+
 - React.js (with Hooks)
 - React Router for navigation
 - Context API for state management
 
 **Database:**
+
 - Firebase Authentication
-- Firebase Firestore 
+- Firebase Firestore
 
 ## Installation & Getting Started
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/Kontukunal/Skill-Swap-App
 cd Skill-Swap-App
+```
